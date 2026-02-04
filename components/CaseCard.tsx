@@ -22,10 +22,10 @@ const CaseCard: React.FC<CaseCardProps> = ({ legalCase, onClick }) => {
 
   const getStatusColor = (status: LegalCase['status']) => {
     switch (status) {
-      case 'Ativo': return 'bg-emerald-600 text-white';
+      case 'Ativo': return 'bg-emerald-800 text-white';
       case 'Julgado': return 'bg-slate-900 text-white';
       case 'Arquivado': return 'bg-slate-200 text-slate-700';
-      case 'Suspenso': return 'bg-amber-500 text-white';
+      case 'Suspenso': return 'bg-amber-600 text-white';
       default: return 'bg-slate-100 text-slate-700';
     }
   };
@@ -33,15 +33,15 @@ const CaseCard: React.FC<CaseCardProps> = ({ legalCase, onClick }) => {
   return (
     <div 
       onClick={() => onClick?.(legalCase)}
-      className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-2xl hover:border-blue-600/30 transition-all cursor-pointer group active:scale-[0.98]"
+      className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden flex flex-col hover:shadow-2xl hover:border-emerald-800/30 transition-all cursor-pointer group active:scale-[0.98]"
     >
       <div className="p-7 flex-grow">
         <div className="flex justify-between items-start mb-6">
           <div>
-            <span className="inline-block px-3 py-1 text-[9px] font-black rounded-full bg-blue-50 text-blue-700 uppercase mb-3 tracking-widest">
+            <span className="inline-block px-3 py-1 text-[9px] font-black rounded-full bg-slate-100 text-slate-700 uppercase mb-3 tracking-widest">
               Processo Judicial
             </span>
-            <h3 className="text-xl font-black text-slate-900 leading-none group-hover:text-blue-700 transition-colors tracking-tight">
+            <h3 className="text-xl font-black text-slate-900 leading-none group-hover:text-emerald-900 transition-colors tracking-tight">
               #{legalCase.processNumber}
             </h3>
           </div>
@@ -54,7 +54,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ legalCase, onClick }) => {
 
         <div className="space-y-4">
           <div className="flex items-center text-sm text-slate-600">
-            <div className="bg-slate-100 p-1.5 rounded-lg mr-3 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+            <div className="bg-slate-100 p-1.5 rounded-lg mr-3 group-hover:bg-emerald-50 group-hover:text-emerald-900 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -65,7 +65,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ legalCase, onClick }) => {
             </div>
           </div>
           <div className="flex items-center text-sm text-slate-600">
-            <div className="bg-slate-100 p-1.5 rounded-lg mr-3 group-hover:bg-blue-50 group-hover:text-blue-700 transition-colors">
+            <div className="bg-slate-100 p-1.5 rounded-lg mr-3 group-hover:bg-emerald-50 group-hover:text-emerald-900 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
@@ -89,7 +89,7 @@ const CaseCard: React.FC<CaseCardProps> = ({ legalCase, onClick }) => {
         <button 
           onClick={handleGetInsight}
           disabled={loading}
-          className="text-emerald-700 font-black hover:underline uppercase tracking-widest"
+          className="text-emerald-800 font-black hover:underline uppercase tracking-widest"
         >
           {loading ? 'Analisando...' : 'IA INSIGHT'}
         </button>

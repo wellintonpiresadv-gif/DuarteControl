@@ -39,7 +39,6 @@ export const db = {
   getLawyers: (): Lawyer[] => {
     const data = localStorage.getItem(LAWYERS_KEY);
     if (!data) {
-      // Dados iniciais caso o banco esteja vazio
       const initial = [
         { id: 'l1', name: 'Dra. Ana Costa', oab: '12345/SP' },
         { id: 'l2', name: 'Dr. Roberto Santos', oab: '67890/RJ' }
@@ -53,6 +52,23 @@ export const db = {
   saveLawyer: (lawyer: Lawyer) => {
     const lawyers = db.getLawyers();
     const updated = [...lawyers, lawyer];
+    localStorage.setItem(LAWYERS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  updateLawyer: (updatedLawyer: Lawyer) => {
+    const lawyers = db.getLawyers();
+    const index = lawyers.findIndex(l => l.id === updatedLawyer.id);
+    if (index !== -1) {
+      lawyers[index] = updatedLawyer;
+      localStorage.setItem(LAWYERS_KEY, JSON.stringify(lawyers));
+    }
+    return lawyers;
+  },
+
+  deleteLawyer: (id: string) => {
+    const lawyers = db.getLawyers();
+    const updated = lawyers.filter(l => l.id !== id);
     localStorage.setItem(LAWYERS_KEY, JSON.stringify(updated));
     return updated;
   },

@@ -12,19 +12,19 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {/* Header */}
-      <header className="bg-slate-950 text-white shadow-xl sticky top-0 z-50 border-b border-blue-900/20">
+      <header className="bg-slate-950 text-white shadow-xl sticky top-0 z-50 border-b border-emerald-900/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div 
               className="flex items-center cursor-pointer group" 
               onClick={() => setView(AppView.HOME)}
             >
-              <div className="bg-blue-700 p-2 rounded-lg mr-3 shadow-lg group-hover:bg-blue-600 transition-colors">
+              <div className="bg-emerald-800 p-2 rounded-lg mr-3 shadow-lg group-hover:bg-emerald-700 transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
-              <h1 className="text-xl font-black tracking-tighter uppercase">Duarte<span className="text-emerald-500">Control</span></h1>
+              <h1 className="text-xl font-black tracking-tighter uppercase">Duarte<span className="text-slate-400">Control</span></h1>
             </div>
             
             <nav className="hidden md:flex space-x-2">
@@ -49,7 +49,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
               <div className="w-px h-6 bg-slate-800 mx-2 self-center"></div>
               <button 
                 onClick={() => setView(AppView.REGISTER)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-black transition-all shadow-lg active:scale-95"
+                className="bg-emerald-800 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-black transition-all shadow-lg active:scale-95 border border-emerald-700"
               >
                 NOVO PROCESSO
               </button>
@@ -64,8 +64,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView }) => {
       </main>
 
       <footer className="bg-slate-950 border-t border-slate-900 py-8 mt-12">
-        <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">
-          DuarteControl &bull; <span className="text-emerald-700">Gestão Jurídica de Alto Padrão</span>
+        <div className="max-w-7xl auto px-4 text-center text-slate-600 text-[10px] font-black uppercase tracking-[0.3em]">
+          DuarteControl &bull; <span className="text-emerald-900">Gestão Jurídica de Alto Padrão</span>
         </div>
       </footer>
     </div>
