@@ -42,7 +42,7 @@ const App: React.FC = () => {
     setLawyers(db.getLawyers());
   }, []);
 
-  // Handlers
+  // Handlers de Advogados
   const handleSaveLawyer = (e: React.FormEvent) => {
     e.preventDefault();
     if (!lawyerForm.name) return;
@@ -53,10 +53,30 @@ const App: React.FC = () => {
         name: lawyerForm.name,
         oab: lawyerForm.oab
       };
-      const updated = db.updateLawyer(updatedLawyer);
-      setLawyers(updated);
+      
+      // Atualiza o advogado no DB
+      const updatedLawyers = db.updateLawyer(updatedLawyer);
+      setLawyers(updatedLawyers);
+
+      // Propaga a mudança de nome para todos os processos vinculados
+      const allCases = db.getCases();
+      let updatedAnyCase = false;
+      const updatedCases = allCases.map(c => {
+        if (c.lawyerId === updatedLawyer.id) {
+          updatedAnyCase = true;
+          return { ...c, lawyer: updatedLawyer.name };
+        }
+        return c;
+      });
+
+      if (updatedAnyCase) {
+        // Salva a lista de casos atualizada se houver mudanças
+        localStorage.setItem('duarte_control_cases', JSON.stringify(updatedCases));
+        setCases(updatedCases);
+      }
+
       setEditingLawyer(null);
-      alert('Dados do profissional atualizados!');
+      alert('Cadastro do profissional e processos vinculados atualizados!');
     } else {
       const newLawyer: Lawyer = {
         id: Math.random().toString(36).substr(2, 9),
@@ -65,7 +85,7 @@ const App: React.FC = () => {
       };
       const updated = db.saveLawyer(newLawyer);
       setLawyers(updated);
-      alert('Profissional cadastrado!');
+      alert('Profissional cadastrado com sucesso!');
     }
     setLawyerForm({ name: '', oab: '' });
   };
@@ -76,6 +96,25 @@ const App: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleDeleteLawyer = (id: string) => {
+    const linkedCases = cases.filter(c => c.lawyerId === id);
+    const confirmMsg = linkedCases.length > 0 
+      ? `ATENÇÃO: Este advogado possui ${linkedCases.length} processos vinculados. Se você excluir, os processos permanecerão no sistema mas sem um responsável técnico. Deseja prosseguir com a exclusão?`
+      : "Tem certeza que deseja remover este profissional do corpo jurídico?";
+
+    if (window.confirm(confirmMsg)) {
+      const updated = db.deleteLawyer(id);
+      setLawyers(updated);
+      
+      // Limpa estado de edição caso o deletado seja o que está sendo editado
+      if (editingLawyer?.id === id) {
+        setEditingLawyer(null);
+        setLawyerForm({ name: '', oab: '' });
+      }
+    }
+  };
+
+  // Handlers de Processos
   const startEditCase = (c: LegalCase) => {
     setEditingCase(c);
     setFormData({
@@ -89,18 +128,6 @@ const App: React.FC = () => {
     setSelectedCase(null);
     setView(AppView.EDIT_CASE);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleDeleteLawyer = (id: string) => {
-    const linkedCases = cases.filter(c => c.lawyerId === id);
-    const confirmMsg = linkedCases.length > 0 
-      ? `Este advogado possui ${linkedCases.length} processos vinculados. Ao excluir, os processos continuarão existindo mas sem referência técnica atualizada. Deseja continuar?`
-      : "Tem certeza que deseja remover este profissional do corpo jurídico?";
-
-    if (window.confirm(confirmMsg)) {
-      const updated = db.deleteLawyer(id);
-      setLawyers(updated);
-    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,7 +163,7 @@ const App: React.FC = () => {
       };
       const updatedList = db.updateCase(updatedCase);
       setCases(updatedList);
-      alert('Registro atualizado!');
+      alert('Dados do processo atualizados!');
     } else {
       const newCase: LegalCase = {
         id: Math.random().toString(36).substr(2, 9),
@@ -151,7 +178,7 @@ const App: React.FC = () => {
       };
       const updatedList = db.saveCase(newCase);
       setCases(updatedList);
-      alert('Novo processo registrado!');
+      alert('Novo processo registrado com sucesso!');
     }
 
     setFormData({ processNumber: '', author: '', lawyerId: '', pdfData: '', pdfName: '', status: 'Ativo' });
@@ -213,7 +240,6 @@ const App: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* NOVO BOTAO: BUSCAR POR NUMERO */}
         <button 
           onClick={() => { setSearchMode('number'); setView(AppView.SEARCH); }} 
           className="p-8 bg-emerald-900 text-white rounded-3xl hover:bg-emerald-800 transition-all text-left group shadow-lg border border-emerald-950"
@@ -366,7 +392,8 @@ const App: React.FC = () => {
               <button 
                 type="button" 
                 onClick={() => { setEditingLawyer(null); setLawyerForm({ name: '', oab: '' }); }}
-                className="py-3 px-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                className="py-3 px-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-300 transition-all"
+                title="Cancelar Edição"
               >
                 X
               </button>
@@ -390,9 +417,9 @@ const App: React.FC = () => {
                 <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {lawyers.map(l => (
-                <tr key={l.id} className="hover:bg-slate-50 transition-colors group">
+                <tr key={l.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-8 py-5 font-bold text-slate-800 group-hover:text-emerald-900">{l.name}</td>
                   <td className="px-8 py-5 text-slate-500 font-mono text-sm">{l.oab || '---'}</td>
                   <td className="px-8 py-5 text-center">
@@ -403,21 +430,26 @@ const App: React.FC = () => {
                   <td className="px-8 py-5 text-right space-x-2">
                     <button 
                       onClick={() => startEditLawyer(l)}
-                      className="p-2 text-slate-600 hover:text-emerald-900 hover:bg-emerald-50 rounded-lg transition-all"
-                      title="Editar"
+                      className="p-2 text-slate-500 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-all"
+                      title="Editar Dados do Profissional"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
                     <button 
                       onClick={() => handleDeleteLawyer(l.id)}
                       className="p-2 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
-                      title="Excluir"
+                      title="Excluir Advogado"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </td>
                 </tr>
               ))}
+              {lawyers.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-8 py-10 text-center text-slate-400 italic text-sm">Nenhum advogado cadastrado.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -491,6 +523,9 @@ const App: React.FC = () => {
             </div>
           );
         })}
+        {Object.keys(casesByLawyer).length === 0 && (
+           <div className="py-24 text-center text-slate-400 font-bold italic opacity-40">Nenhum processo vinculado a advogados foi encontrado.</div>
+        )}
       </div>
     </div>
   );
@@ -517,6 +552,9 @@ const App: React.FC = () => {
             </div>
           );
         })}
+        {Object.keys(casesByAuthor).length === 0 && (
+           <div className="py-24 text-center text-slate-400 font-bold italic opacity-40">Nenhum autor com processos registrados foi encontrado.</div>
+        )}
       </div>
     </div>
   );
