@@ -59,12 +59,5 @@ export const db = {
 
   saveLawyerList: (lawyers: Lawyer[]) => {
     localStorage.setItem(LAWYERS_KEY, JSON.stringify(lawyers));
-  },
-
-  // Utilitários
-  clearAll: () => {
-    localStorage.removeItem(CASES_KEY);
-    localStorage.removeItem(LAWYERS_KEY);
-    window.location.reload();
   }
 };
