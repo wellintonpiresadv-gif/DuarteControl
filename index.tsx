@@ -3,14 +3,21 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
+console.log("DuarteControl: Iniciando aplicação...");
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
+  console.error("Erro Crítico: Elemento #root não encontrado no DOM.");
+} else {
+  try {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    console.log("DuarteControl: Renderização concluída com sucesso.");
+  } catch (err) {
+    console.error("Erro durante a renderização do React:", err);
+  }
 }
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
