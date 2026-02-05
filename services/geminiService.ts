@@ -3,15 +3,8 @@ import { GoogleGenAI } from "@google/genai";
 
 export const getLegalInsight = async (caseData: { processNumber: string; author: string; lawyer: string }) => {
   try {
-    // Inicialização segura: busca a chave no momento do uso
-    const apiKey = process.env.API_KEY;
-    
-    if (!apiKey) {
-      console.warn("API_KEY não configurada. O insight de IA estará indisponível.");
-      return "Configure a API Key para obter resumos inteligentes.";
-    }
-
-    const ai = new GoogleGenAI({ apiKey });
+    // Inicialização do cliente seguindo rigorosamente as diretrizes do SDK
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: `Analise as seguintes informações de um processo jurídico:
@@ -26,6 +19,7 @@ export const getLegalInsight = async (caseData: { processNumber: string; author:
       },
     });
 
+    // Acesso direto à propriedade .text conforme as diretrizes
     return response.text;
   } catch (error) {
     console.error("Erro ao obter insight da IA:", error);

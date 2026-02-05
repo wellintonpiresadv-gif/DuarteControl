@@ -3,7 +3,6 @@ import React from 'react';
 import { AppView } from '../types';
 
 interface LayoutProps {
-  // Use React.ReactNode instead of the non-existent RegularNode
   children: React.ReactNode;
   currentView: AppView;
   setView: (view: AppView) => void;
@@ -26,32 +25,44 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
-              <h1 className="text-xl font-black tracking-tighter uppercase">Duarte<span className="text-emerald-500">Control</span></h1>
+              <h1 className="text-xl font-black text-white tracking-tighter uppercase">Duarte<span className="text-emerald-500">Control</span></h1>
             </div>
             
-            <nav className="hidden md:flex items-center space-x-2">
+            <nav className="hidden md:flex items-center space-x-1">
               <button 
                 onClick={() => setView(AppView.HOME)}
-                className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${currentView === AppView.HOME ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.HOME ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
                 Dashboard
               </button>
               <button 
                 onClick={() => setView(AppView.MANAGE_LAWYERS)}
-                className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${currentView === AppView.MANAGE_LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.MANAGE_LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
-                Advogados
+                Corpo Jurídico
+              </button>
+              <button 
+                onClick={() => setView(AppView.LAWYERS)}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                Por Advogado
+              </button>
+              <button 
+                onClick={() => setView(AppView.AUTHORS)}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.AUTHORS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                Por Autor
               </button>
               <button 
                 onClick={() => setView(AppView.SEARCH)}
-                className={`px-3 py-2 rounded-md text-sm font-bold transition-colors ${currentView === AppView.SEARCH ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.SEARCH ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
                 Busca
               </button>
               <div className="w-px h-6 bg-slate-800 mx-2 self-center"></div>
               <button 
                 onClick={() => setView(AppView.REGISTER)}
-                className="bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-sm font-black transition-all shadow-lg active:scale-95"
+                className="bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
               >
                 NOVO PROCESSO
               </button>
