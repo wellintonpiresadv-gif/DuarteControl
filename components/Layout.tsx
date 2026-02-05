@@ -25,7 +25,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                 </svg>
               </div>
-              <h1 className="text-xl font-black text-white tracking-tighter uppercase">Duarte<span className="text-emerald-500">Control</span></h1>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-black text-white tracking-tighter uppercase leading-none">Duarte<span className="text-emerald-500">Control</span></h1>
+                <div className="flex items-center mt-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mr-1.5"></span>
+                  <span className="text-[8px] font-black text-emerald-500/80 uppercase tracking-widest">Cloud Database Active</span>
+                </div>
+              </div>
             </div>
             
             <nav className="hidden md:flex items-center space-x-1">
@@ -39,19 +45,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                 onClick={() => setView(AppView.MANAGE_LAWYERS)}
                 className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.MANAGE_LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
-                Corpo Jurídico
-              </button>
-              <button 
-                onClick={() => setView(AppView.LAWYERS)}
-                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-              >
-                Por Advogado
-              </button>
-              <button 
-                onClick={() => setView(AppView.AUTHORS)}
-                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.AUTHORS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
-              >
-                Por Autor
+                Advogados
               </button>
               <button 
                 onClick={() => setView(AppView.SEARCH)}
@@ -88,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
       <footer className="bg-slate-900 border-t border-slate-800 py-10 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mb-4">
-              DuarteControl &bull; Gestão Jurídica Premium
+              DuarteControl &bull; Centralizado na Nuvem Vercel
             </p>
             <div className="h-1 w-20 bg-emerald-900/30 mx-auto rounded-full"></div>
         </div>
