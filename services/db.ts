@@ -1,8 +1,9 @@
 
-import { LegalCase, Lawyer } from '../types';
+import { LegalCase, Lawyer, Deadline } from '../types';
 
 const CASES_KEY = 'duarte_control_cases';
 const LAWYERS_KEY = 'duarte_control_lawyers';
+const DEADLINES_KEY = 'duarte_control_deadlines';
 
 // Simulação de latência de rede para preparar a UI para um banco real
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -86,5 +87,39 @@ export const db = {
 
   saveLawyerList: async (lawyers: Lawyer[]): Promise<void> => {
     localStorage.setItem(LAWYERS_KEY, JSON.stringify(lawyers));
+  },
+
+  // Prazos (Deadlines)
+  getDeadlines: async (): Promise<Deadline[]> => {
+    await delay(400);
+    const data = localStorage.getItem(DEADLINES_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveDeadline: async (deadline: Deadline): Promise<Deadline[]> => {
+    await delay(500);
+    const deadlines = await db.getDeadlines();
+    const updated = [deadline, ...deadlines];
+    localStorage.setItem(DEADLINES_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  updateDeadline: async (updatedDeadline: Deadline): Promise<Deadline[]> => {
+    await delay(500);
+    const deadlines = await db.getDeadlines();
+    const index = deadlines.findIndex(d => d.id === updatedDeadline.id);
+    if (index !== -1) {
+      deadlines[index] = updatedDeadline;
+      localStorage.setItem(DEADLINES_KEY, JSON.stringify(deadlines));
+    }
+    return deadlines;
+  },
+
+  deleteDeadline: async (id: string): Promise<Deadline[]> => {
+    await delay(400);
+    const deadlines = await db.getDeadlines();
+    const updated = deadlines.filter(d => d.id !== id);
+    localStorage.setItem(DEADLINES_KEY, JSON.stringify(updated));
+    return updated;
   }
 };

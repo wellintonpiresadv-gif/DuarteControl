@@ -42,6 +42,12 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                 Dashboard
               </button>
               <button 
+                onClick={() => setView(AppView.DEADLINES)}
+                className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.DEADLINES ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+              >
+                Prazos
+              </button>
+              <button 
                 onClick={() => setView(AppView.MANAGE_LAWYERS)}
                 className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.MANAGE_LAWYERS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
@@ -54,6 +60,19 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                 Busca
               </button>
               <div className="w-px h-6 bg-slate-800 mx-2 self-center"></div>
+              
+              <a 
+                href="https://notebooklm.google.com/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" />
+                </svg>
+                NotebookLM
+              </a>
+
               <button 
                 onClick={() => setView(AppView.REGISTER)}
                 className="bg-emerald-700 hover:bg-emerald-600 text-white px-5 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all shadow-lg active:scale-95"
