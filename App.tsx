@@ -7,6 +7,7 @@ import Login from './components/Login';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType } from './types';
 import { db } from './services/db';
 
+// Componente para sobreposição de carregamento
 const LoadingOverlay: React.FC = () => (
   <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center">
     <div className="flex flex-col items-center">
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [selectedCase, setSelectedCase] = useState<LegalCase | null>(null);
   const [editingCase, setEditingCase] = useState<LegalCase | null>(null);
   const [editingLawyer, setEditingLawyer] = useState<Lawyer | null>(null);
+  const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
   
   const [formData, setFormData] = useState({
     processNumber: '',
@@ -105,29 +107,65 @@ const App: React.FC = () => {
     setIsLoading(true);
     try {
       const selectedCaseObj = cases.find(c => c.id === data.caseId);
-      const newDeadline: Deadline = {
-        id: Math.random().toString(36).substr(2, 9),
-        title: data.title,
-        date: data.date,
-        caseId: data.caseId,
-        processNumber: selectedCaseObj?.processNumber,
-        priority: data.priority,
-        type: data.type,
-        subType: data.type === 'Manifestação' ? data.subType : undefined,
-        completed: false
-      };
-      const updated = await db.saveDeadline(newDeadline);
-      setDeadlines(updated);
+      
+      if (editingDeadline) {
+        const updatedDeadline: Deadline = {
+          ...editingDeadline,
+          title: data.title,
+          date: data.date,
+          caseId: data.caseId,
+          processNumber: selectedCaseObj?.processNumber,
+          priority: data.priority,
+          type: data.type,
+          subType: data.type === 'Manifestação' ? data.subType : undefined,
+        };
+        const updated = await db.updateDeadline(updatedDeadline);
+        setDeadlines(updated);
+        setEditingDeadline(null);
+      } else {
+        const newDeadline: Deadline = {
+          id: Math.random().toString(36).substr(2, 9),
+          title: data.title,
+          date: data.date,
+          caseId: data.caseId,
+          processNumber: selectedCaseObj?.processNumber,
+          priority: data.priority,
+          type: data.type,
+          subType: data.type === 'Manifestação' ? data.subType : undefined,
+          completed: false
+        };
+        const updated = await db.saveDeadline(newDeadline);
+        setDeadlines(updated);
+      }
+
       setDeadlineForm({ 
         title: '', date: '', caseId: '', 
         priority: 'Média', type: 'Manifestação', 
         subType: 'Manifestação Geral' 
       });
-      if (!customForm) alert("Prazo registrado e sincronizado!");
+      if (!customForm) alert("Prazo sincronizado com sucesso!");
     } catch (err) {
-      alert("Erro ao salvar.");
+      alert("Erro ao salvar o prazo.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const startEditDeadline = (d: Deadline) => {
+    const password = window.prompt("Digite a senha de segurança para editar este prazo:");
+    if (password === '123450') {
+      setEditingDeadline(d);
+      setDeadlineForm({
+        title: d.title,
+        date: d.date,
+        caseId: d.caseId || '',
+        priority: d.priority,
+        type: d.type,
+        subType: d.subType || 'Manifestação Geral'
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (password !== null) {
+      alert("Senha incorreta. Acesso negado.");
     }
   };
 
@@ -163,7 +201,7 @@ const App: React.FC = () => {
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
         <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
-          Novo <span className="text-emerald-500">Prazo / Agenda</span>
+          {editingDeadline ? 'Editar' : 'Novo'} <span className="text-emerald-500">Prazo / Agenda</span>
         </h2>
         <form onSubmit={handleSaveDeadline} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -227,9 +265,20 @@ const App: React.FC = () => {
             <option value="">Vincular Processo (Opcional)...</option>
             {cases.map(c => <option key={c.id} value={c.id}>{c.processNumber} - {c.author}</option>)}
           </select>
-          <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
-            Sincronizar Prazo no Servidor
-          </button>
+          <div className="flex gap-4">
+            <button type="submit" className="flex-grow py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
+              {editingDeadline ? 'Atualizar Prazo' : 'Sincronizar Prazo'}
+            </button>
+            {editingDeadline && (
+              <button 
+                type="button" 
+                onClick={() => { setEditingDeadline(null); setDeadlineForm({ title: '', date: '', caseId: '', priority: 'Média', type: 'Manifestação', subType: 'Manifestação Geral' }); }}
+                className="px-8 py-4 bg-slate-800 text-white font-black rounded-2xl transition-all uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -257,11 +306,14 @@ const App: React.FC = () => {
                     {d.processNumber && <span className="text-blue-500">#{d.processNumber}</span>}
                   </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
                   <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : d.priority === 'Média' ? 'bg-amber-900/30 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
                     {d.priority}
                   </span>
-                  <button onClick={() => db.deleteDeadline(d.id).then(list => setDeadlines(list))} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+                  <button onClick={() => startEditDeadline(d)} className="p-2 text-slate-500 hover:text-emerald-500 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  </button>
+                  <button onClick={() => { if(window.confirm("Remover este prazo?")) db.deleteDeadline(d.id).then(list => setDeadlines(list)) }} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -284,22 +336,22 @@ const App: React.FC = () => {
             placeholder={`Buscar por ${searchMode === 'number' ? 'número' : searchMode === 'author' ? 'autor' : 'advogado'}...`}
             className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
           />
-          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shrink-0">
             <button 
               onClick={() => setSearchMode('number')}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'number' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'number' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
               Nº Processo
             </button>
             <button 
               onClick={() => setSearchMode('author')}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'author' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'author' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
               Autor
             </button>
             <button 
               onClick={() => setSearchMode('lawyer')}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'lawyer' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'lawyer' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
             >
               Advogado
             </button>
@@ -323,7 +375,7 @@ const App: React.FC = () => {
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-emerald-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Processos Sincronizados</p>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Processos Ativos</p>
           <p className="text-4xl font-black text-white">{cases.length}</p>
         </div>
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-red-600">
@@ -331,14 +383,14 @@ const App: React.FC = () => {
           <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed && isNearDeadline(d.date)).length}</p>
         </div>
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Agenda Aberta</p>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Agenda Pendente</p>
           <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed).length}</p>
         </div>
         <div className="bg-emerald-900/10 p-6 rounded-2xl border border-emerald-900/30">
-          <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Status Global</p>
+          <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Sincronização</p>
           <p className="text-xl font-bold text-emerald-100 flex items-center">
             <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-            Cloud Escritório
+            Escritório Nuvem
           </p>
         </div>
       </div>
@@ -353,7 +405,7 @@ const App: React.FC = () => {
             {deadlines.filter(d => !d.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5).map(d => {
                const near = isNearDeadline(d.date);
                return (
-                <div key={d.id} className={`bg-slate-900 p-5 rounded-2xl border ${near ? 'border-red-600/50' : 'border-slate-800'} flex justify-between items-center group`}>
+                <div key={d.id} className={`bg-slate-900 p-5 rounded-2xl border ${near ? 'border-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.1)]' : 'border-slate-800'} flex justify-between items-center group`}>
                   <div>
                     <div className="flex items-center space-x-2">
                       <p className="text-white font-bold">{d.title}</p>
@@ -363,9 +415,14 @@ const App: React.FC = () => {
                       {new Date(d.date).toLocaleDateString()} &bull; {d.type}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
-                    {d.priority}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
+                      {d.priority}
+                    </span>
+                    <button onClick={() => startEditDeadline(d)} className="text-slate-500 hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-all">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                  </div>
                 </div>
                );
             })}
@@ -373,17 +430,17 @@ const App: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button onClick={() => setView(AppView.SEARCH)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left">
-            <p className="font-black text-lg uppercase tracking-tight">Busca Global</p>
-            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Sincronizado</p>
+          <button onClick={() => setView(AppView.SEARCH)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Busca Global</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Acesso ao Banco Sincronizado</p>
           </button>
-          <button onClick={() => setView(AppView.DEADLINES)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left">
-            <p className="font-black text-lg uppercase tracking-tight">Agenda</p>
-            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Prazos e Audiências</p>
+          <button onClick={() => setView(AppView.DEADLINES)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Agenda</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Prazos e Audiências Ativas</p>
           </button>
-          <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg col-span-2">
-            <p className="font-black text-lg uppercase tracking-tight">Cadastrar Novo</p>
-            <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Disponível para todos os usuários</p>
+          <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg col-span-2 group">
+            <p className="font-black text-lg uppercase tracking-tight">Novo Registro Judicial</p>
+            <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Cadastrar Processo na Cloud</p>
           </button>
         </div>
       </div>
@@ -397,7 +454,7 @@ const App: React.FC = () => {
       case AppView.DEADLINES: return renderDeadlines();
       case AppView.REGISTER: 
       case AppView.EDIT_CASE: return (
-        <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
+        <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10 animate-in slide-in-from-bottom-6">
           <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
             {editingCase ? 'Editar' : 'Novo'} <span className="text-emerald-500">Registro Cloud</span>
           </h2>
@@ -438,12 +495,19 @@ const App: React.FC = () => {
                 <option value="Arquivado">Arquivado</option>
               </select>
             </div>
-            <button type="submit" className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Sincronizar no Servidor</button>
+            <div className="flex gap-4">
+              <button type="submit" className="flex-grow py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">
+                {editingCase ? 'Atualizar Processo' : 'Sincronizar no Servidor'}
+              </button>
+              {editingCase && (
+                 <button type="button" onClick={() => { setEditingCase(null); setView(AppView.HOME); }} className="px-8 bg-slate-800 text-white font-black rounded-2xl uppercase tracking-widest">Cancelar</button>
+              )}
+            </div>
           </form>
         </div>
       );
       case AppView.MANAGE_LAWYERS: return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in">
           <div className="bg-slate-900 rounded-[3rem] border border-slate-800 p-10">
             <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">Equipe de <span className="text-emerald-500">Advogados</span></h2>
             <form onSubmit={async (e) => {
@@ -455,20 +519,20 @@ const App: React.FC = () => {
               setLawyerForm({name: '', oab: ''});
               setIsLoading(false);
             }} className="flex gap-4">
-              <input type="text" placeholder="Nome" value={lawyerForm.name} onChange={e => setLawyerForm({...lawyerForm, name: e.target.value})} className="flex-grow bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold" />
-              <input type="text" placeholder="OAB" value={lawyerForm.oab} onChange={e => setLawyerForm({...lawyerForm, oab: e.target.value})} className="w-40 bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold" />
-              <button type="submit" className="px-10 bg-emerald-600 text-white font-black rounded-2xl uppercase text-[10px]">Adicionar</button>
+              <input type="text" placeholder="Nome Completo" value={lawyerForm.name} onChange={e => setLawyerForm({...lawyerForm, name: e.target.value})} className="flex-grow bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold focus:border-emerald-500" />
+              <input type="text" placeholder="OAB" value={lawyerForm.oab} onChange={e => setLawyerForm({...lawyerForm, oab: e.target.value})} className="w-40 bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold focus:border-emerald-500" />
+              <button type="submit" className="px-10 bg-emerald-600 text-white font-black rounded-2xl uppercase text-[10px] hover:bg-emerald-500 transition-all">Adicionar</button>
             </form>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {lawyers.map(l => (
               <div key={l.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex justify-between items-center group">
                 <div>
-                  <p className="font-black text-white group-hover:text-emerald-400 uppercase">{l.name}</p>
+                  <p className="font-black text-white group-hover:text-emerald-400 uppercase transition-colors">{l.name}</p>
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{l.oab || 'OAB N/A'}</p>
                 </div>
                 <button onClick={async () => {
-                   if(window.confirm("Remover?")) {
+                   if(window.confirm("Remover profissional do escritório?")) {
                      setIsLoading(true);
                      const updated = await db.deleteLawyer(l.id);
                      setLawyers(updated);
@@ -497,6 +561,7 @@ const App: React.FC = () => {
         onClose={() => setSelectedCase(null)} 
         onEdit={(c) => { setEditingCase(c); setFormData({ processNumber: c.processNumber, author: c.author, lawyerId: c.lawyerId, pdfData: c.pdfData || '', pdfName: c.pdfName || '', status: c.status }); setSelectedCase(null); setView(AppView.EDIT_CASE); }}
         onAddDeadline={handleSaveDeadline}
+        onEditDeadline={startEditDeadline}
         allDeadlines={deadlines}
         onDeleteDeadline={async (id) => setDeadlines(await db.deleteDeadline(id))}
       />
