@@ -19,6 +19,7 @@ export interface LegalCase {
 }
 
 export type DeadlineType = 'Audiência' | 'Manifestação' | 'Edital' | 'Geral';
+
 export type ManifestationSubType = 
   | 'Contestação' 
   | 'Réplica/Impugnação' 

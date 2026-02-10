@@ -7,7 +7,6 @@ import Login from './components/Login';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType } from './types';
 import { db } from './services/db';
 
-// Componente para sobreposição de carregamento
 const LoadingOverlay: React.FC = () => (
   <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center">
     <div className="flex flex-col items-center">
@@ -29,7 +28,6 @@ const App: React.FC = () => {
   const [selectedCase, setSelectedCase] = useState<LegalCase | null>(null);
   const [editingCase, setEditingCase] = useState<LegalCase | null>(null);
   const [editingLawyer, setEditingLawyer] = useState<Lawyer | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     processNumber: '',
@@ -40,10 +38,7 @@ const App: React.FC = () => {
     status: 'Ativo' as LegalCase['status']
   });
 
-  const [lawyerForm, setLawyerForm] = useState({
-    name: '',
-    oab: ''
-  });
+  const [lawyerForm, setLawyerForm] = useState({ name: '', oab: '' });
 
   const [deadlineForm, setDeadlineForm] = useState({
     title: '',
@@ -92,6 +87,16 @@ const App: React.FC = () => {
     }
   };
 
+  const isNearDeadline = (dateStr: string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadlineDate = new Date(dateStr);
+    deadlineDate.setHours(0, 0, 0, 0);
+    const diffTime = deadlineDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 5;
+  };
+
   const handleSaveDeadline = async (e?: React.FormEvent, customForm?: any) => {
     e?.preventDefault();
     const data = customForm || deadlineForm;
@@ -118,7 +123,7 @@ const App: React.FC = () => {
         priority: 'Média', type: 'Manifestação', 
         subType: 'Manifestação Geral' 
       });
-      if (!customForm) alert("Prazo registrado!");
+      if (!customForm) alert("Prazo registrado e sincronizado!");
     } catch (err) {
       alert("Erro ao salvar.");
     } finally {
@@ -126,93 +131,15 @@ const App: React.FC = () => {
     }
   };
 
-  const isNearDeadline = (dateStr: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const deadlineDate = new Date(dateStr);
-    deadlineDate.setHours(0, 0, 0, 0);
-    const diffTime = deadlineDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays >= 0 && diffDays <= 5;
-  };
-
-  // Implementação da função para salvar advogado (correção de erro)
-  const handleSaveLawyer = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!lawyerForm.name) return;
-    setIsLoading(true);
-    try {
-      if (editingLawyer) {
-        const updated = await db.updateLawyer({ ...editingLawyer, name: lawyerForm.name, oab: lawyerForm.oab });
-        setLawyers(updated);
-        setEditingLawyer(null);
-      } else {
-        const newLawyer: Lawyer = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: lawyerForm.name,
-          oab: lawyerForm.oab,
-        };
-        const updated = await db.saveLawyer(newLawyer);
-        setLawyers(updated);
-      }
-      setLawyerForm({ name: '', oab: '' });
-      alert("Advogado sincronizado!");
-    } catch (err) {
-      alert("Erro ao salvar advogado.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Implementação da função para deletar advogado (correção de erro)
-  const handleDeleteLawyer = async (id: string) => {
-    if (!window.confirm("Deseja excluir este advogado?")) return;
-    setIsLoading(true);
-    try {
-      const updated = await db.deleteLawyer(id);
-      setLawyers(updated);
-    } catch (err) {
-      alert("Erro ao excluir.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Implementação da função para iniciar edição de processo (correção de erro)
-  const startEditCase = (c: LegalCase) => {
-    setEditingCase(c);
-    setFormData({
-      processNumber: c.processNumber,
-      author: c.author,
-      lawyerId: c.lawyerId,
-      pdfData: c.pdfData || '',
-      pdfName: c.pdfName || '',
-      status: c.status
-    });
-    setSelectedCase(null);
-    setView(AppView.EDIT_CASE);
-  };
-
-  // Implementação da função para salvar processo (correção de erro)
   const handleSaveCase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.processNumber || !formData.author || !formData.lawyerId) {
-      alert("Preencha todos os campos obrigatórios.");
-      return;
-    }
-
+    if (!formData.processNumber || !formData.author || !formData.lawyerId) return;
     setIsLoading(true);
     try {
       const selectedLawyer = lawyers.find(l => l.id === formData.lawyerId);
       const lawyerName = selectedLawyer ? selectedLawyer.name : 'Desconhecido';
-
       if (editingCase) {
-        const updatedCase: LegalCase = {
-          ...editingCase,
-          ...formData,
-          lawyer: lawyerName,
-        };
-        const updated = await db.updateCase(updatedCase);
+        const updated = await db.updateCase({ ...editingCase, ...formData, lawyer: lawyerName });
         setCases(updated);
         setEditingCase(null);
       } else {
@@ -220,15 +147,13 @@ const App: React.FC = () => {
           id: Math.random().toString(36).substr(2, 9),
           ...formData,
           lawyer: lawyerName,
-          dateAdded: new Date().toISOString(),
+          dateAdded: new Date().toISOString()
         };
         const updated = await db.saveCase(newCase);
         setCases(updated);
       }
       setFormData({ processNumber: '', author: '', lawyerId: '', pdfData: '', pdfName: '', status: 'Ativo' });
       setView(AppView.HOME);
-    } catch (err) {
-      alert("Erro ao salvar processo.");
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +163,7 @@ const App: React.FC = () => {
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
         <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
-          Novo <span className="text-emerald-500">Prazo / Compromisso</span>
+          Novo <span className="text-emerald-500">Prazo / Agenda</span>
         </h2>
         <form onSubmit={handleSaveDeadline} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -246,7 +171,7 @@ const App: React.FC = () => {
               type="text" 
               value={deadlineForm.title}
               onChange={e => setDeadlineForm({...deadlineForm, title: e.target.value})}
-              placeholder="Título (ex: Contestação, Audiência de Conciliação)"
+              placeholder="Título (ex: Contestação, Audiência)"
               className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
             />
             <input 
@@ -275,7 +200,7 @@ const App: React.FC = () => {
                 className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
               >
                 <option value="Contestação">Contestação</option>
-                <option value="Réplica/Impugnação">Réplica/Impugnação</option>
+                <option value="Réplica/Impugnação">Impugnação / Réplica</option>
                 <option value="Recurso (Apelação)">Recurso (Apelação)</option>
                 <option value="Agravo de Instrumento">Agravo de Instrumento</option>
                 <option value="Embargos">Embargos</option>
@@ -299,7 +224,7 @@ const App: React.FC = () => {
             onChange={e => setDeadlineForm({...deadlineForm, caseId: e.target.value})}
             className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
           >
-            <option value="">Vincular Processo...</option>
+            <option value="">Vincular Processo (Opcional)...</option>
             {cases.map(c => <option key={c.id} value={c.id}>{c.processNumber} - {c.author}</option>)}
           </select>
           <button type="submit" className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
@@ -309,37 +234,35 @@ const App: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        <h3 className="text-xl font-black text-white uppercase tracking-tight border-l-4 border-emerald-600 pl-4">Agenda Unificada</h3>
+        <h3 className="text-xl font-black text-white uppercase tracking-tight border-l-4 border-emerald-600 pl-4">Agenda Jurídica Unificada</h3>
         <div className="grid grid-cols-1 gap-4">
           {deadlines.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(d => {
             const near = !d.completed && isNearDeadline(d.date);
             return (
               <div key={d.id} className={`p-6 rounded-3xl border ${d.completed ? 'bg-slate-950 border-slate-900 opacity-60' : 'bg-slate-900 border-slate-800'} flex items-center transition-all group ${near ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : ''}`}>
                 <button 
-                  onClick={() => {
-                    db.updateDeadline({...d, completed: !d.completed}).then(list => setDeadlines(list));
-                  }}
+                  onClick={() => db.updateDeadline({...d, completed: !d.completed}).then(list => setDeadlines(list))}
                   className={`w-10 h-10 rounded-xl flex items-center justify-center mr-6 transition-all ${d.completed ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-500 hover:bg-emerald-900/50'}`}
                 >
                   {d.completed ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg> : <div className="w-4 h-4 border-2 border-slate-600 rounded-full"></div>}
                 </button>
                 <div className="flex-grow">
-                  <div className="flex items-center space-x-3 mb-1">
+                  <div className="flex items-center space-x-3">
                     <p className={`font-black uppercase tracking-tight ${d.completed ? 'text-slate-500 line-through' : 'text-white'}`}>{d.title}</p>
-                    {near && <span className="bg-red-600 text-[8px] font-black text-white px-2 py-0.5 rounded-full animate-pulse uppercase tracking-widest">Urgente - 5 dias</span>}
+                    {near && <span className="bg-red-600 text-[8px] font-black text-white px-2 py-0.5 rounded-full animate-pulse uppercase tracking-widest">URGENTE - {Math.ceil((new Date(d.date).getTime() - new Date().getTime()) / (1000*3600*24))} dias</span>}
                   </div>
-                  <div className="flex items-center space-x-4 text-[10px] font-bold uppercase tracking-widest">
+                  <div className="flex items-center space-x-4 text-[10px] font-bold uppercase tracking-widest mt-1">
                     <span className="text-emerald-500">{new Date(d.date).toLocaleDateString()}</span>
                     <span className="text-slate-500">{d.type} {d.subType ? `> ${d.subType}` : ''}</span>
-                    {d.processNumber && <span className="text-blue-500">Proc: {d.processNumber}</span>}
+                    {d.processNumber && <span className="text-blue-500">#{d.processNumber}</span>}
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
                   <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : d.priority === 'Média' ? 'bg-amber-900/30 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
                     {d.priority}
                   </span>
-                  <button onClick={() => db.deleteDeadline(d.id).then(list => setDeadlines(list))} className="p-2 text-slate-600 hover:text-red-500">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" /></svg>
+                  <button onClick={() => db.deleteDeadline(d.id).then(list => setDeadlines(list))} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" /></svg>
                   </button>
                 </div>
               </div>
@@ -350,50 +273,97 @@ const App: React.FC = () => {
     </div>
   );
 
+  const renderSearch = () => (
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800">
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          <input 
+            type="text" 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder={`Buscar por ${searchMode === 'number' ? 'número' : searchMode === 'author' ? 'autor' : 'advogado'}...`}
+            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+          />
+          <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+            <button 
+              onClick={() => setSearchMode('number')}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'number' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+            >
+              Nº Processo
+            </button>
+            <button 
+              onClick={() => setSearchMode('author')}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'author' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+            >
+              Autor
+            </button>
+            <button 
+              onClick={() => setSearchMode('lawyer')}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === 'lawyer' ? 'bg-emerald-600 text-white' : 'text-slate-500 hover:text-white'}`}
+            >
+              Advogado
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {cases.filter(c => {
+          if (!searchTerm) return true;
+          const term = searchTerm.toLowerCase();
+          if (searchMode === 'number') return c.processNumber.toLowerCase().includes(term);
+          if (searchMode === 'author') return c.author.toLowerCase().includes(term);
+          if (searchMode === 'lawyer') return c.lawyer.toLowerCase().includes(term);
+          return false;
+        }).map(c => <CaseCard key={c.id} legalCase={c} onClick={setSelectedCase} />)}
+      </div>
+    </div>
+  );
+
   const renderHome = () => (
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-emerald-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Processos</p>
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Processos Sincronizados</p>
           <p className="text-4xl font-black text-white">{cases.length}</p>
         </div>
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Prazos Ativos</p>
-          <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed).length}</p>
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-red-600">
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Urgências (5 dias)</p>
+          <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed && isNearDeadline(d.date)).length}</p>
         </div>
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-amber-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Equipe</p>
-          <p className="text-4xl font-black text-white">{lawyers.length}</p>
+        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600">
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Agenda Aberta</p>
+          <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed).length}</p>
         </div>
         <div className="bg-emerald-900/10 p-6 rounded-2xl border border-emerald-900/30">
           <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1">Status Global</p>
           <p className="text-xl font-bold text-emerald-100 flex items-center">
             <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
-            Conectado
+            Cloud Escritório
           </p>
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
           <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center">
-             <svg className="w-5 h-5 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-             Próximos Prazos
+             <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             Prazos Críticos
           </h2>
           <div className="space-y-4">
-            {deadlines.filter(d => !d.completed).slice(0, 4).map(d => {
+            {deadlines.filter(d => !d.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5).map(d => {
                const near = isNearDeadline(d.date);
                return (
                 <div key={d.id} className={`bg-slate-900 p-5 rounded-2xl border ${near ? 'border-red-600/50' : 'border-slate-800'} flex justify-between items-center group`}>
                   <div>
                     <div className="flex items-center space-x-2">
                       <p className="text-white font-bold">{d.title}</p>
-                      {near && <span className="bg-red-600 text-[7px] font-black text-white px-1.5 py-0.5 rounded-full uppercase">Urgent</span>}
+                      {near && <span className="bg-red-600 text-[7px] font-black text-white px-1.5 py-0.5 rounded-full uppercase">Crítico</span>}
                     </div>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">
-                      {new Date(d.date).toLocaleDateString()} &bull; {d.processNumber || 'Sem Processo'}
+                      {new Date(d.date).toLocaleDateString()} &bull; {d.type}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : d.priority === 'Média' ? 'bg-amber-900/30 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
+                  <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
                     {d.priority}
                   </span>
                 </div>
@@ -401,181 +371,117 @@ const App: React.FC = () => {
             })}
           </div>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <button onClick={() => setView(AppView.SEARCH)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left">
-            <p className="font-black text-lg uppercase tracking-tight">Buscar</p>
-            <p className="text-xs text-slate-500 mt-1 uppercase">Banco de Dados</p>
+            <p className="font-black text-lg uppercase tracking-tight">Busca Global</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Sincronizado</p>
           </button>
           <button onClick={() => setView(AppView.DEADLINES)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left">
-            <p className="font-black text-lg uppercase tracking-tight">Prazos</p>
-            <p className="text-xs text-slate-500 mt-1 uppercase">Calendário</p>
+            <p className="font-black text-lg uppercase tracking-tight">Agenda</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Prazos e Audiências</p>
           </button>
           <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg col-span-2">
-            <p className="font-black text-lg uppercase tracking-tight">Novo Registro</p>
-            <p className="text-xs text-emerald-100 mt-1 uppercase">Sincronização imediata</p>
+            <p className="font-black text-lg uppercase tracking-tight">Cadastrar Novo</p>
+            <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Disponível para todos os usuários</p>
           </button>
         </div>
       </div>
-      <div>
-        <h2 className="text-xl font-black text-white mb-6 uppercase tracking-tight">Registros Recentes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {cases.slice(0, 6).map(c => <CaseCard key={c.id} legalCase={c} onClick={setSelectedCase} />)}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderManageLawyers = () => (
-    <div className="space-y-10 animate-in fade-in duration-500">
-      <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
-        <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
-          {editingLawyer ? 'Editar' : 'Cadastrar'} <span className="text-emerald-500">Profissional</span>
-        </h2>
-        <form onSubmit={handleSaveLawyer} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <input 
-              type="text" 
-              value={lawyerForm.name}
-              onChange={e => setLawyerForm({...lawyerForm, name: e.target.value})}
-              placeholder="Nome Completo"
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-            />
-            <input 
-              type="text" 
-              value={lawyerForm.oab}
-              onChange={e => setLawyerForm({...lawyerForm, oab: e.target.value})}
-              placeholder="Inscrição OAB"
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-            />
-          </div>
-          <div className="flex space-x-4">
-            <button type="submit" className="flex-grow py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest">
-              Sincronizar Profissional
-            </button>
-            {editingLawyer && (
-              <button type="button" onClick={() => { setEditingLawyer(null); setLawyerForm({name: '', oab: ''}); }} className="px-8 py-4 bg-slate-800 text-white font-black rounded-2xl">Cancelar</button>
-            )}
-          </div>
-        </form>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {lawyers.map(l => (
-          <div key={l.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex justify-between items-center group">
-            <div>
-              <p className="font-black text-white group-hover:text-emerald-400 transition-colors uppercase">{l.name}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{l.oab || 'OAB N/A'}</p>
-            </div>
-            <div className="flex space-x-2">
-              <button onClick={() => { setEditingLawyer(l); setLawyerForm({name: l.name, oab: l.oab || ''}); }} className="p-2 bg-slate-800 hover:bg-emerald-600 rounded-lg text-white">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-              </button>
-              <button onClick={() => handleDeleteLawyer(l.id)} className="p-2 bg-slate-800 hover:bg-red-600 rounded-lg text-white">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" /></svg>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderCaseForm = (isEdit: boolean) => (
-    <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10 animate-in slide-in-from-bottom-4">
-      <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
-        {isEdit ? 'Editar' : 'Novo'} <span className="text-emerald-500">Processo na Nuvem</span>
-      </h2>
-      <form onSubmit={handleSaveCase} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <input 
-            type="text" 
-            value={formData.processNumber}
-            onChange={e => setFormData({...formData, processNumber: e.target.value})}
-            placeholder="Número do Processo"
-            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-          />
-          <input 
-            type="text" 
-            value={formData.author}
-            onChange={e => setFormData({...formData, author: e.target.value})}
-            placeholder="Nome do Autor"
-            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <select 
-            value={formData.lawyerId}
-            onChange={e => setFormData({...formData, lawyerId: e.target.value})}
-            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
-          >
-            <option value="">Selecione o Advogado...</option>
-            {lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-          <select 
-            value={formData.status}
-            onChange={e => setFormData({...formData, status: e.target.value as LegalCase['status']})}
-            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
-          >
-            <option value="Ativo">Ativo</option>
-            <option value="Suspenso">Suspenso</option>
-            <option value="Julgado">Julgado</option>
-            <option value="Arquivado">Arquivado</option>
-          </select>
-        </div>
-        <div className="flex space-x-4">
-          <button type="submit" className="flex-grow py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
-            {isEdit ? 'Atualizar Cloud' : 'Registrar na Nuvem'}
-          </button>
-          <button type="button" onClick={() => setView(AppView.HOME)} className="px-8 py-4 bg-slate-800 text-white font-black rounded-2xl transition-all">Cancelar</button>
-        </div>
-      </form>
     </div>
   );
 
   const renderContent = () => {
     switch (view) {
       case AppView.HOME: return renderHome();
-      case AppView.SEARCH: return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="bg-slate-900 p-8 rounded-[2.5rem] border border-slate-800">
-            <div className="flex flex-col md:flex-row gap-4 items-center">
+      case AppView.SEARCH: return renderSearch();
+      case AppView.DEADLINES: return renderDeadlines();
+      case AppView.REGISTER: 
+      case AppView.EDIT_CASE: return (
+        <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
+          <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
+            {editingCase ? 'Editar' : 'Novo'} <span className="text-emerald-500">Registro Cloud</span>
+          </h2>
+          <form onSubmit={handleSaveCase} className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <input 
                 type="text" 
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Buscar termo no banco de dados..."
+                value={formData.processNumber}
+                onChange={e => setFormData({...formData, processNumber: e.target.value})}
+                placeholder="Número do Processo"
                 className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
               />
-              <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
-                {(['number', 'author', 'lawyer'] as SearchMode[]).map(mode => (
-                  <button 
-                    key={mode}
-                    onClick={() => setSearchMode(mode)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchMode === mode ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}
-                  >
-                    {mode === 'number' ? 'Nº' : mode === 'author' ? 'Autor' : 'Advogado'}
-                  </button>
-                ))}
-              </div>
+              <input 
+                type="text" 
+                value={formData.author}
+                onChange={e => setFormData({...formData, author: e.target.value})}
+                placeholder="Nome do Autor"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <select 
+                value={formData.lawyerId}
+                onChange={e => setFormData({...formData, lawyerId: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
+              >
+                <option value="">Advogado Responsável...</option>
+                {lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+              <select 
+                value={formData.status}
+                onChange={e => setFormData({...formData, status: e.target.value as LegalCase['status']})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
+              >
+                <option value="Ativo">Ativo</option>
+                <option value="Suspenso">Suspenso</option>
+                <option value="Julgado">Julgado</option>
+                <option value="Arquivado">Arquivado</option>
+              </select>
+            </div>
+            <button type="submit" className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">Sincronizar no Servidor</button>
+          </form>
+        </div>
+      );
+      case AppView.MANAGE_LAWYERS: return (
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="bg-slate-900 rounded-[3rem] border border-slate-800 p-10">
+            <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">Equipe de <span className="text-emerald-500">Advogados</span></h2>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if(!lawyerForm.name) return;
+              setIsLoading(true);
+              const updated = await db.saveLawyer({ id: Math.random().toString(36).substr(2, 9), ...lawyerForm });
+              setLawyers(updated);
+              setLawyerForm({name: '', oab: ''});
+              setIsLoading(false);
+            }} className="flex gap-4">
+              <input type="text" placeholder="Nome" value={lawyerForm.name} onChange={e => setLawyerForm({...lawyerForm, name: e.target.value})} className="flex-grow bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold" />
+              <input type="text" placeholder="OAB" value={lawyerForm.oab} onChange={e => setLawyerForm({...lawyerForm, oab: e.target.value})} className="w-40 bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white outline-none font-bold" />
+              <button type="submit" className="px-10 bg-emerald-600 text-white font-black rounded-2xl uppercase text-[10px]">Adicionar</button>
+            </form>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {useMemo(() => {
-              if (!searchTerm) return cases;
-              const term = searchTerm.toLowerCase();
-              return cases.filter(c => {
-                if (searchMode === 'number') return c.processNumber.toLowerCase().includes(term);
-                if (searchMode === 'author') return c.author.toLowerCase().includes(term);
-                if (searchMode === 'lawyer') return c.lawyer.toLowerCase().includes(term);
-                return false;
-              });
-            }, [cases, searchTerm, searchMode]).map(c => <CaseCard key={c.id} legalCase={c} onClick={setSelectedCase} />)}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {lawyers.map(l => (
+              <div key={l.id} className="bg-slate-900 p-6 rounded-3xl border border-slate-800 flex justify-between items-center group">
+                <div>
+                  <p className="font-black text-white group-hover:text-emerald-400 uppercase">{l.name}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{l.oab || 'OAB N/A'}</p>
+                </div>
+                <button onClick={async () => {
+                   if(window.confirm("Remover?")) {
+                     setIsLoading(true);
+                     const updated = await db.deleteLawyer(l.id);
+                     setLawyers(updated);
+                     setIsLoading(false);
+                   }
+                }} className="p-2 text-slate-600 hover:text-red-500 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       );
-      case AppView.MANAGE_LAWYERS: return renderManageLawyers();
-      case AppView.REGISTER: return renderCaseForm(false);
-      case AppView.EDIT_CASE: return renderCaseForm(true);
-      case AppView.DEADLINES: return renderDeadlines();
       default: return renderHome();
     }
   };
@@ -589,13 +495,10 @@ const App: React.FC = () => {
       <CaseDetailsModal 
         legalCase={selectedCase} 
         onClose={() => setSelectedCase(null)} 
-        onEdit={startEditCase}
+        onEdit={(c) => { setEditingCase(c); setFormData({ processNumber: c.processNumber, author: c.author, lawyerId: c.lawyerId, pdfData: c.pdfData || '', pdfName: c.pdfName || '', status: c.status }); setSelectedCase(null); setView(AppView.EDIT_CASE); }}
         onAddDeadline={handleSaveDeadline}
         allDeadlines={deadlines}
-        onDeleteDeadline={async (id) => {
-          const updated = await db.deleteDeadline(id);
-          setDeadlines(updated);
-        }}
+        onDeleteDeadline={async (id) => setDeadlines(await db.deleteDeadline(id))}
       />
     </Layout>
   );
