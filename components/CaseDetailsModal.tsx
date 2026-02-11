@@ -6,6 +6,7 @@ interface CaseDetailsModalProps {
   legalCase: LegalCase | null;
   onClose: () => void;
   onEdit?: (c: LegalCase) => void;
+  onDeleteCase?: (id: string) => Promise<void>;
   onAddDeadline?: (e?: React.FormEvent, data?: any) => Promise<void>;
   onEditDeadline?: (d: Deadline) => void;
   allDeadlines: Deadline[];
@@ -16,6 +17,7 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
   legalCase, 
   onClose, 
   onEdit, 
+  onDeleteCase,
   onAddDeadline,
   onEditDeadline,
   allDeadlines,
@@ -68,6 +70,12 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
               className="px-4 py-2 bg-slate-800 hover:bg-emerald-700 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest text-slate-300"
             >
               Editar Base
+            </button>
+            <button 
+              onClick={() => onDeleteCase?.(legalCase.id)}
+              className="px-4 py-2 bg-red-900/20 hover:bg-red-600 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-white border border-red-900/30"
+            >
+              Excluir
             </button>
             <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-slate-500">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>

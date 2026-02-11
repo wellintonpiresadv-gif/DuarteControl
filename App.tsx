@@ -169,6 +169,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteCase = async (id: string) => {
+    const password = window.prompt("ATENÇÃO: Você está prestes a EXCLUIR DEFINITIVAMENTE este processo. Digite a senha para confirmar:");
+    if (password === '123450') {
+      setIsLoading(true);
+      try {
+        const updatedCases = await db.deleteCase(id);
+        setCases(updatedCases);
+        setSelectedCase(null);
+        alert("Processo removido permanentemente da Cloud.");
+      } catch (err) {
+        alert("Erro ao remover processo.");
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (password !== null) {
+      alert("Senha incorreta. Operação de exclusão cancelada.");
+    }
+  };
+
   const handleSaveCase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.processNumber || !formData.author || !formData.lawyerId) return;
@@ -560,6 +579,7 @@ const App: React.FC = () => {
         legalCase={selectedCase} 
         onClose={() => setSelectedCase(null)} 
         onEdit={(c) => { setEditingCase(c); setFormData({ processNumber: c.processNumber, author: c.author, lawyerId: c.lawyerId, pdfData: c.pdfData || '', pdfName: c.pdfName || '', status: c.status }); setSelectedCase(null); setView(AppView.EDIT_CASE); }}
+        onDeleteCase={handleDeleteCase}
         onAddDeadline={handleSaveDeadline}
         onEditDeadline={startEditDeadline}
         allDeadlines={deadlines}
