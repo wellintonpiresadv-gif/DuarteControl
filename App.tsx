@@ -7,7 +7,6 @@ import Login from './components/Login';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType } from './types';
 import { db } from './services/db';
 
-// Componente para sobreposição de carregamento
 const LoadingOverlay: React.FC = () => (
   <div className="fixed inset-0 z-[100] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center">
     <div className="flex flex-col items-center">
@@ -31,6 +30,8 @@ const App: React.FC = () => {
   const [editingLawyer, setEditingLawyer] = useState<Lawyer | null>(null);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     processNumber: '',
     author: '',
@@ -99,6 +100,25 @@ const App: React.FC = () => {
     return diffDays >= 0 && diffDays <= 5;
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert("Por favor, anexe apenas arquivos PDF.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFormData({
+          ...formData,
+          pdfData: event.target?.result as string,
+          pdfName: file.name
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveDeadline = async (e?: React.FormEvent, customForm?: any) => {
     e?.preventDefault();
     const data = customForm || deadlineForm;
@@ -114,7 +134,7 @@ const App: React.FC = () => {
           title: data.title,
           date: data.date,
           caseId: data.caseId,
-          processNumber: selectedCaseObj?.processNumber,
+          processNumber: selectedCaseObj?.processNumber || editingDeadline.processNumber,
           priority: data.priority,
           type: data.type,
           subType: data.type === 'Manifestação' ? data.subType : undefined,
@@ -163,6 +183,7 @@ const App: React.FC = () => {
         type: d.type,
         subType: d.subType || 'Manifestação Geral'
       });
+      setView(AppView.DEADLINES);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (password !== null) {
       alert("Senha incorreta. Acesso negado.");
@@ -190,7 +211,10 @@ const App: React.FC = () => {
 
   const handleSaveCase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.processNumber || !formData.author || !formData.lawyerId) return;
+    if (!formData.processNumber || !formData.author || !formData.lawyerId) {
+      alert("Preencha Número, Autor e Advogado.");
+      return;
+    }
     setIsLoading(true);
     try {
       const selectedLawyer = lawyers.find(l => l.id === formData.lawyerId);
@@ -514,6 +538,38 @@ const App: React.FC = () => {
                 <option value="Arquivado">Arquivado</option>
               </select>
             </div>
+
+            {/* Campo de Anexo de PDF */}
+            <div className="space-y-4">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Documento PDF (Opcional)</label>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-slate-950 border-2 border-dashed border-slate-800 rounded-2xl px-6 py-8 text-center cursor-pointer hover:border-emerald-500/50 transition-all group"
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".pdf"
+                  className="hidden" 
+                />
+                <svg className="w-10 h-10 text-slate-700 mx-auto mb-3 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <p className="text-slate-400 font-bold text-sm">
+                  {formData.pdfName ? `Arquivo: ${formData.pdfName}` : 'Clique para anexar um PDF existente'}
+                </p>
+                {formData.pdfName && (
+                   <button 
+                     onClick={(e) => { e.stopPropagation(); setFormData({...formData, pdfData: '', pdfName: ''}); }}
+                     className="mt-2 text-red-500 text-[10px] font-black uppercase hover:underline"
+                   >
+                     Remover Anexo
+                   </button>
+                )}
+              </div>
+            </div>
+
             <div className="flex gap-4">
               <button type="submit" className="flex-grow py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-xl">
                 {editingCase ? 'Atualizar Processo' : 'Sincronizar no Servidor'}
