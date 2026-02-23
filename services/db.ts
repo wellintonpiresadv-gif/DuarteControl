@@ -1,9 +1,10 @@
 
-import { LegalCase, Lawyer, Deadline } from '../types';
+import { LegalCase, Lawyer, Deadline, Payment } from '../types';
 
 const CASES_KEY = 'duarte_control_cases';
 const LAWYERS_KEY = 'duarte_control_lawyers';
 const DEADLINES_KEY = 'duarte_control_deadlines';
+const PAYMENTS_KEY = 'duarte_control_payments';
 
 // Simulação de latência de rede para preparar a UI para um banco real
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -120,6 +121,40 @@ export const db = {
     const deadlines = await db.getDeadlines();
     const updated = deadlines.filter(d => d.id !== id);
     localStorage.setItem(DEADLINES_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  // Pagamentos (Payments)
+  getPayments: async (): Promise<Payment[]> => {
+    await delay(400);
+    const data = localStorage.getItem(PAYMENTS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  savePayment: async (payment: Payment): Promise<Payment[]> => {
+    await delay(500);
+    const payments = await db.getPayments();
+    const updated = [payment, ...payments];
+    localStorage.setItem(PAYMENTS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  updatePayment: async (updatedPayment: Payment): Promise<Payment[]> => {
+    await delay(500);
+    const payments = await db.getPayments();
+    const index = payments.findIndex(p => p.id === updatedPayment.id);
+    if (index !== -1) {
+      payments[index] = updatedPayment;
+      localStorage.setItem(PAYMENTS_KEY, JSON.stringify(payments));
+    }
+    return payments;
+  },
+
+  deletePayment: async (id: string): Promise<Payment[]> => {
+    await delay(400);
+    const payments = await db.getPayments();
+    const updated = payments.filter(p => p.id !== id);
+    localStorage.setItem(PAYMENTS_KEY, JSON.stringify(updated));
     return updated;
   }
 };

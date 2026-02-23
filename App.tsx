@@ -4,7 +4,9 @@ import Layout from './components/Layout';
 import CaseCard from './components/CaseCard';
 import CaseDetailsModal from './components/CaseDetailsModal';
 import Login from './components/Login';
-import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType } from './types';
+import PaymentControl from './components/PaymentControl';
+import AccountsReceivable from './components/AccountsReceivable';
+import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType, Payment } from './types';
 import { db } from './services/db';
 
 const LoadingOverlay: React.FC = () => (
@@ -24,6 +26,7 @@ const App: React.FC = () => {
   const [cases, setCases] = useState<LegalCase[]>([]);
   const [lawyers, setLawyers] = useState<Lawyer[]>([]);
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [selectedCase, setSelectedCase] = useState<LegalCase | null>(null);
   const [editingCase, setEditingCase] = useState<LegalCase | null>(null);
@@ -52,20 +55,37 @@ const App: React.FC = () => {
     subType: 'Manifestação Geral' as ManifestationSubType
   });
 
+  const [qualifierForm, setQualifierForm] = useState({
+    instrumento: 'Petição Inicial',
+    acao: 'Reclamação Trabalhista',
+    nome: '',
+    nacionalidade: 'brasileiro(a)',
+    estadoCivil: 'solteiro(a)',
+    profissao: '',
+    rg: '',
+    cpf: '',
+    email: '',
+    endereco: '',
+    advogado: '',
+    oab: ''
+  });
+
   const [searchTerm, setSearchTerm] = useState('');
   const [searchMode, setSearchMode] = useState<SearchMode>('number');
 
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [fetchedCases, fetchedLawyers, fetchedDeadlines] = await Promise.all([
+      const [fetchedCases, fetchedLawyers, fetchedDeadlines, fetchedPayments] = await Promise.all([
         db.getCases(),
         db.getLawyers(),
-        db.getDeadlines()
+        db.getDeadlines(),
+        db.getPayments()
       ]);
       setCases(fetchedCases);
       setLawyers(fetchedLawyers);
       setDeadlines(fetchedDeadlines);
+      setPayments(fetchedPayments);
     } catch (err) {
       console.error(err);
     } finally {
@@ -239,6 +259,153 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const generatedQualification = useMemo(() => {
+    const { nome, nacionalidade, estadoCivil, profissao, rg, cpf, endereco, email, advogado, oab, instrumento, acao } = qualifierForm;
+    return `${nome ? nome.toUpperCase() : '[NOME]'}, ${nacionalidade}, ${estadoCivil}, ${profissao}, portador do RG nº ${rg}, e inscrito no CPF nº ${cpf}, residente e domiciliado em ${endereco}, e-mail ${email}, vem à presença de Vossa Excelência, por intermédio de seu advogado ${advogado}, OAB ${oab}, propor ${instrumento.toUpperCase()} de ${acao.toUpperCase()} em face de...`.trim();
+  }, [qualifierForm]);
+
+  const renderQualifier = () => (
+    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in duration-500">
+      <div className="bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10">
+        <h2 className="text-3xl font-black uppercase tracking-tighter text-white mb-10">
+          Gerador de <span className="text-emerald-500">Qualificação Jurídica</span>
+        </h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo de Instrumento e Ação</label>
+              <input 
+                type="text" 
+                value={qualifierForm.instrumento}
+                onChange={e => setQualifierForm({...qualifierForm, instrumento: e.target.value})}
+                placeholder="Ex: Petição Inicial"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
+              <input 
+                type="text" 
+                value={qualifierForm.acao}
+                onChange={e => setQualifierForm({...qualifierForm, acao: e.target.value})}
+                placeholder="Ex: Reclamação Trabalhista"
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 mt-8">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Dados do Qualificado</label>
+              <input 
+                type="text" 
+                placeholder="Nome Completo"
+                value={qualifierForm.nome}
+                onChange={e => setQualifierForm({...qualifierForm, nome: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="Nacionalidade"
+                  value={qualifierForm.nacionalidade}
+                  onChange={e => setQualifierForm({...qualifierForm, nacionalidade: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Estado Civil"
+                  value={qualifierForm.estadoCivil}
+                  onChange={e => setQualifierForm({...qualifierForm, estadoCivil: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Profissão"
+                value={qualifierForm.profissao}
+                onChange={e => setQualifierForm({...qualifierForm, profissao: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="RG"
+                  value={qualifierForm.rg}
+                  onChange={e => setQualifierForm({...qualifierForm, rg: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+                <input 
+                  type="text" 
+                  placeholder="CPF"
+                  value={qualifierForm.cpf}
+                  onChange={e => setQualifierForm({...qualifierForm, cpf: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+              </div>
+              <input 
+                type="email" 
+                placeholder="E-mail"
+                value={qualifierForm.email}
+                onChange={e => setQualifierForm({...qualifierForm, email: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+              />
+              <textarea 
+                placeholder="Endereço Residencial Completo"
+                value={qualifierForm.endereco}
+                onChange={e => setQualifierForm({...qualifierForm, endereco: e.target.value})}
+                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold min-h-[100px]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 mt-8">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Representante Legal</label>
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="Nome do Advogado"
+                  value={qualifierForm.advogado}
+                  onChange={e => setQualifierForm({...qualifierForm, advogado: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+                <input 
+                  type="text" 
+                  placeholder="OAB"
+                  value={qualifierForm.oab}
+                  onChange={e => setQualifierForm({...qualifierForm, oab: e.target.value})}
+                  className="bg-slate-950 border border-slate-800 rounded-2xl px-4 py-3 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest block text-center">Visualização do Preâmbulo (Cópia Automática)</label>
+            <div className="bg-slate-950 border border-slate-800 rounded-[2rem] p-8 h-full min-h-[400px] relative group overflow-hidden">
+               <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedQualification);
+                      alert("Preâmbulo copiado para a área de transferência!");
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-xl shadow-lg transition-all active:scale-90"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                  </button>
+               </div>
+               <p className="text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">
+                 {generatedQualification}
+               </p>
+               {(!qualifierForm.nome) && (
+                 <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center p-10 text-center">
+                    <p className="text-slate-500 text-sm font-bold italic uppercase tracking-widest">Aguardando preenchimento dos campos para gerar o texto de qualificação...</p>
+                 </div>
+               )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderDeadlines = () => (
     <div className="space-y-10 animate-in fade-in duration-500">
@@ -440,7 +607,9 @@ const App: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center">
+          <AccountsReceivable payments={payments} onViewAll={() => setView(AppView.PAYMENTS)} />
+          
+          <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center mt-10">
              <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
              Prazos Críticos
           </h2>
@@ -481,9 +650,17 @@ const App: React.FC = () => {
             <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Agenda</p>
             <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Prazos e Audiências Ativas</p>
           </button>
-          <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg col-span-2 group">
-            <p className="font-black text-lg uppercase tracking-tight">Novo Registro Judicial</p>
-            <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Cadastrar Processo na Cloud</p>
+          <button onClick={() => setView(AppView.QUALIFIER)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Qualificador</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Gerador de Preâmbulo Jurídico</p>
+          </button>
+          <button onClick={() => setView(AppView.PAYMENTS)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Financeiro</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Controle de Pagamentos e Recebíveis</p>
+          </button>
+          <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg group md:col-span-2">
+            <p className="font-black text-lg uppercase tracking-tight">Novo Registro</p>
+            <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Cadastrar Processo Cloud</p>
           </button>
         </div>
       </div>
@@ -495,6 +672,7 @@ const App: React.FC = () => {
       case AppView.HOME: return renderHome();
       case AppView.SEARCH: return renderSearch();
       case AppView.DEADLINES: return renderDeadlines();
+      case AppView.QUALIFIER: return renderQualifier();
       case AppView.REGISTER: 
       case AppView.EDIT_CASE: return (
         <div className="max-w-4xl mx-auto bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-800 p-10 animate-in slide-in-from-bottom-6">
@@ -539,7 +717,6 @@ const App: React.FC = () => {
               </select>
             </div>
 
-            {/* Campo de Anexo de PDF */}
             <div className="space-y-4">
               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Documento PDF (Opcional)</label>
               <div 
@@ -620,6 +797,14 @@ const App: React.FC = () => {
             ))}
           </div>
         </div>
+      );
+      case AppView.PAYMENTS: return (
+        <PaymentControl 
+          payments={payments} 
+          cases={cases} 
+          onUpdate={loadData} 
+          setIsLoading={setIsLoading} 
+        />
       );
       default: return renderHome();
     }

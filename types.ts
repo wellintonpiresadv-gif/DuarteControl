@@ -43,6 +43,16 @@ export interface Deadline {
 
 export type SearchMode = 'number' | 'author' | 'lawyer';
 
+export interface Payment {
+  id: string;
+  caseId: string;
+  clientName: string;
+  amount: number;
+  dueDate: string;
+  status: 'Pendente' | 'Pago' | 'Atrasado';
+  description?: string;
+}
+
 export enum AppView {
   HOME = 'home',
   REGISTER = 'register',
@@ -51,5 +61,7 @@ export enum AppView {
   LAWYERS = 'lawyers',
   AUTHORS = 'authors',
   MANAGE_LAWYERS = 'manage_lawyers',
-  DEADLINES = 'deadlines'
+  DEADLINES = 'deadlines',
+  QUALIFIER = 'qualifier',
+  PAYMENTS = 'payments'
 }
