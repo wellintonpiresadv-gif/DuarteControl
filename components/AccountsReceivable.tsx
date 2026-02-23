@@ -31,7 +31,7 @@ const AccountsReceivable: React.FC<AccountsReceivableProps> = ({ payments, onVie
         </div>
       </div>
 
-      <div className="flex-grow space-y-4 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+      <div className="flex-grow space-y-4 overflow-y-auto max-h-[250px] pr-2 custom-scrollbar">
         {pendingPayments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="w-12 h-12 bg-slate-800/50 rounded-full flex items-center justify-center mb-3">

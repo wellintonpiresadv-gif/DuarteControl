@@ -12,11 +12,11 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Credenciais atualizadas conforme solicitação do usuário
-    // Usuário: admin / Senha: 123450
-    if (username === 'admin' && password === '123450') {
+    // Usuário: admin / Senha: 190315
+    if (username === 'admin' && password === '190315') {
       onLogin(username, password);
     } else {
-      setError('Credenciais inválidas. Tente admin / 123450');
+      setError('Credenciais inválidas. Tente admin / 190315');
     }
   };
 
