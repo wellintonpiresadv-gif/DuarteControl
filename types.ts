@@ -12,6 +12,8 @@ export interface LegalCase {
   lawyerId: string;
   lawyer: string;
   dateAdded: string;
+  proxySignatureDate: string;
+  isInitial: boolean;
   status: 'Ativo' | 'Arquivado' | 'Suspenso' | 'Julgado';
   description?: string;
   pdfData?: string;
@@ -39,6 +41,9 @@ export interface Deadline {
   type: DeadlineType;
   subType?: ManifestationSubType;
   completed: boolean;
+  sent?: boolean;
+  pdfData?: string;
+  pdfName?: string;
 }
 
 export type SearchMode = 'number' | 'author' | 'lawyer';

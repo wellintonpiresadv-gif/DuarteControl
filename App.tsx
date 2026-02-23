@@ -39,6 +39,8 @@ const App: React.FC = () => {
     processNumber: '',
     author: '',
     lawyerId: '',
+    proxySignatureDate: '',
+    isInitial: false,
     pdfData: '',
     pdfName: '',
     status: 'Ativo' as LegalCase['status']
@@ -52,7 +54,10 @@ const App: React.FC = () => {
     caseId: '',
     priority: 'Média' as Deadline['priority'],
     type: 'Manifestação' as DeadlineType,
-    subType: 'Manifestação Geral' as ManifestationSubType
+    subType: 'Manifestação Geral' as ManifestationSubType,
+    sent: false,
+    pdfData: '',
+    pdfName: ''
   });
 
   const [qualifierForm, setQualifierForm] = useState({
@@ -158,6 +163,9 @@ const App: React.FC = () => {
           priority: data.priority,
           type: data.type,
           subType: data.type === 'Manifestação' ? data.subType : undefined,
+          sent: data.sent,
+          pdfData: data.pdfData,
+          pdfName: data.pdfName
         };
         const updated = await db.updateDeadline(updatedDeadline);
         setDeadlines(updated);
@@ -172,7 +180,10 @@ const App: React.FC = () => {
           priority: data.priority,
           type: data.type,
           subType: data.type === 'Manifestação' ? data.subType : undefined,
-          completed: false
+          completed: false,
+          sent: data.sent || false,
+          pdfData: data.pdfData || '',
+          pdfName: data.pdfName || ''
         };
         const updated = await db.saveDeadline(newDeadline);
         setDeadlines(updated);
@@ -181,7 +192,10 @@ const App: React.FC = () => {
       setDeadlineForm({ 
         title: '', date: '', caseId: '', 
         priority: 'Média', type: 'Manifestação', 
-        subType: 'Manifestação Geral' 
+        subType: 'Manifestação Geral',
+        sent: false,
+        pdfData: '',
+        pdfName: ''
       });
       if (!customForm) alert("Prazo sincronizado com sucesso!");
     } catch (err) {
@@ -201,7 +215,10 @@ const App: React.FC = () => {
         caseId: d.caseId || '',
         priority: d.priority,
         type: d.type,
-        subType: d.subType || 'Manifestação Geral'
+        subType: d.subType || 'Manifestação Geral',
+        sent: d.sent || false,
+        pdfData: d.pdfData || '',
+        pdfName: d.pdfName || ''
       });
       setView(AppView.DEADLINES);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -231,10 +248,15 @@ const App: React.FC = () => {
 
   const handleSaveCase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.processNumber || !formData.author || !formData.lawyerId) {
-      alert("Preencha Número, Autor e Advogado.");
+    if (!formData.author || !formData.lawyerId || !formData.proxySignatureDate) {
+      alert("Preencha Autor, Advogado e Data da Procuração.");
       return;
     }
+    if (!formData.isInitial && !formData.processNumber) {
+      alert("Para processos existentes, o número é obrigatório.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const selectedLawyer = lawyers.find(l => l.id === formData.lawyerId);
@@ -247,13 +269,14 @@ const App: React.FC = () => {
         const newCase: LegalCase = {
           id: Math.random().toString(36).substr(2, 9),
           ...formData,
+          processNumber: formData.isInitial ? 'INICIAL PENDENTE' : formData.processNumber,
           lawyer: lawyerName,
           dateAdded: new Date().toISOString()
         };
         const updated = await db.saveCase(newCase);
         setCases(updated);
       }
-      setFormData({ processNumber: '', author: '', lawyerId: '', pdfData: '', pdfName: '', status: 'Ativo' });
+      setFormData({ processNumber: '', author: '', lawyerId: '', proxySignatureDate: '', isInitial: false, pdfData: '', pdfName: '', status: 'Ativo' });
       setView(AppView.HOME);
     } finally {
       setIsLoading(false);
@@ -469,14 +492,71 @@ const App: React.FC = () => {
               <option value="Alta">Prioridade Alta</option>
             </select>
           </div>
-          <select 
-            value={deadlineForm.caseId}
-            onChange={e => setDeadlineForm({...deadlineForm, caseId: e.target.value})}
-            className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
-          >
-            <option value="">Vincular Processo (Opcional)...</option>
-            {cases.map(c => <option key={c.id} value={c.id}>{c.processNumber} - {c.author}</option>)}
-          </select>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <select 
+              value={deadlineForm.caseId}
+              onChange={e => setDeadlineForm({...deadlineForm, caseId: e.target.value})}
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
+            >
+              <option value="">Vincular Processo (Opcional)...</option>
+              {cases.map(c => <option key={c.id} value={c.id}>{c.processNumber} - {c.author}</option>)}
+            </select>
+
+            <div className="flex items-center space-x-4 bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4">
+              <input 
+                type="checkbox" 
+                id="sent-checkbox"
+                checked={deadlineForm.sent}
+                onChange={e => setDeadlineForm({...deadlineForm, sent: e.target.checked})}
+                className="w-5 h-5 accent-emerald-500"
+              />
+              <label htmlFor="sent-checkbox" className="text-sm font-bold text-slate-300 cursor-pointer uppercase tracking-widest">Manifestação Encaminhada</label>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Anexar Manifestação (PDF)</label>
+            <div 
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf';
+                input.onchange = (e: any) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      setDeadlineForm({
+                        ...deadlineForm,
+                        pdfData: event.target?.result as string,
+                        pdfName: file.name
+                      });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                };
+                input.click();
+              }}
+              className="w-full bg-slate-950 border-2 border-dashed border-slate-800 rounded-2xl px-6 py-8 text-center cursor-pointer hover:border-emerald-500/50 transition-all group"
+            >
+              <svg className="w-10 h-10 text-slate-700 mx-auto mb-3 group-hover:text-emerald-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <p className="text-slate-400 font-bold text-sm">
+                {deadlineForm.pdfName ? `Arquivo: ${deadlineForm.pdfName}` : 'Clique para anexar a manifestação em PDF'}
+              </p>
+              {deadlineForm.pdfName && (
+                 <button 
+                   onClick={(e) => { e.stopPropagation(); setDeadlineForm({...deadlineForm, pdfData: '', pdfName: ''}); }}
+                   className="mt-2 text-red-500 text-[10px] font-black uppercase hover:underline"
+                 >
+                   Remover Anexo
+                 </button>
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-4">
             <button type="submit" className="flex-grow py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all uppercase tracking-widest shadow-xl">
               {editingDeadline ? 'Atualizar Prazo' : 'Sincronizar Prazo'}
@@ -484,7 +564,7 @@ const App: React.FC = () => {
             {editingDeadline && (
               <button 
                 type="button" 
-                onClick={() => { setEditingDeadline(null); setDeadlineForm({ title: '', date: '', caseId: '', priority: 'Média', type: 'Manifestação', subType: 'Manifestação Geral' }); }}
+                onClick={() => { setEditingDeadline(null); setDeadlineForm({ title: '', date: '', caseId: '', priority: 'Média', type: 'Manifestação', subType: 'Manifestação Geral', sent: false, pdfData: '', pdfName: '' }); }}
                 className="px-8 py-4 bg-slate-800 text-white font-black rounded-2xl transition-all uppercase tracking-widest"
               >
                 Cancelar
@@ -511,6 +591,7 @@ const App: React.FC = () => {
                   <div className="flex items-center space-x-3">
                     <p className={`font-black uppercase tracking-tight ${d.completed ? 'text-slate-500 line-through' : 'text-white'}`}>{d.title}</p>
                     {near && <span className="bg-red-600 text-[8px] font-black text-white px-2 py-0.5 rounded-full animate-pulse uppercase tracking-widest">URGENTE - {Math.ceil((new Date(d.date).getTime() - new Date().getTime()) / (1000*3600*24))} dias</span>}
+                    {d.sent && <span className="bg-emerald-600 text-[8px] font-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">Encaminhada</span>}
                   </div>
                   <div className="flex items-center space-x-4 text-[10px] font-bold uppercase tracking-widest mt-1">
                     <span className="text-emerald-500">{new Date(d.date).toLocaleDateString()}</span>
@@ -519,6 +600,22 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                  {d.pdfData && (
+                    <button 
+                      onClick={() => {
+                        const newWindow = window.open();
+                        if (newWindow) {
+                          newWindow.document.write(
+                            `<iframe src="${d.pdfData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+                          );
+                        }
+                      }}
+                      className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                      title="Ver Manifestação"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                    </button>
+                  )}
                   <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : d.priority === 'Média' ? 'bg-amber-900/30 text-amber-400' : 'bg-slate-800 text-slate-400'}`}>
                     {d.priority}
                   </span>
@@ -611,6 +708,55 @@ const App: React.FC = () => {
         <div className="space-y-6">
           <AccountsReceivable payments={payments} onViewAll={() => setView(AppView.PAYMENTS)} />
           
+          <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 backdrop-blur-md shadow-2xl">
+            <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-6 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Alertas de Protocolo (15 dias)
+            </h3>
+            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {(() => {
+                const initialCases = cases.filter(c => c.isInitial);
+                if (initialCases.length === 0) {
+                  return <p className="text-center text-slate-600 text-[10px] font-black uppercase tracking-widest py-8">Nenhum alerta de protocolo</p>;
+                }
+                return initialCases.sort((a, b) => {
+                  const dateA = new Date(a.proxySignatureDate);
+                  const dateB = new Date(b.proxySignatureDate);
+                  return dateA.getTime() - dateB.getTime();
+                }).map(c => {
+                  const signatureDate = new Date(c.proxySignatureDate);
+                  const deadlineDate = new Date(signatureDate);
+                  deadlineDate.setDate(deadlineDate.getDate() + 15);
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  const diffTime = deadlineDate.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const isUrgent = diffDays <= 3;
+                  const isOverdue = diffDays < 0;
+
+                  return (
+                    <div key={c.id} className={`p-4 rounded-2xl border ${isOverdue ? 'bg-red-950/30 border-red-500/50' : isUrgent ? 'bg-red-900/10 border-red-900/30' : 'bg-slate-950/50 border-slate-800/50'} flex justify-between items-center`}>
+                      <div>
+                        <p className="text-xs font-black text-white uppercase tracking-widest truncate max-w-[180px]">{c.author}</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                          Assinado: {signatureDate.toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${isOverdue ? 'text-red-500' : isUrgent ? 'text-red-500 animate-pulse' : 'text-amber-500'}`}>
+                          {isOverdue ? 'ATRASADO' : `${diffDays} dias restantes`}
+                        </p>
+                        <p className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">Limite: {deadlineDate.toLocaleDateString('pt-BR')}</p>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
           <h2 className="text-xl font-black text-white uppercase tracking-tight flex items-center mt-6">
              <svg className="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
              Prazos Críticos
@@ -683,40 +829,93 @@ const App: React.FC = () => {
           </h2>
           <form onSubmit={handleSaveCase} className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <input 
-                type="text" 
-                value={formData.processNumber}
-                onChange={e => setFormData({...formData, processNumber: e.target.value})}
-                placeholder="Número do Processo"
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-              />
-              <input 
-                type="text" 
-                value={formData.author}
-                onChange={e => setFormData({...formData, author: e.target.value})}
-                placeholder="Nome do Autor"
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
-              />
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Tipo de Registro</label>
+                <div className="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800">
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, isInitial: false})}
+                    className={`flex-grow py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!formData.isInitial ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                  >
+                    Processo Existente
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setFormData({...formData, isInitial: true})}
+                    className={`flex-grow py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${formData.isInitial ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
+                  >
+                    Petição Inicial
+                  </button>
+                </div>
+              </div>
+              {!formData.isInitial ? (
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Número do Processo</label>
+                  <input 
+                    type="text" 
+                    value={formData.processNumber}
+                    onChange={e => setFormData({...formData, processNumber: e.target.value})}
+                    placeholder="0000000-00.0000.0.00.0000"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Status do Protocolo</label>
+                  <div className="w-full bg-slate-950/50 border border-slate-800 rounded-2xl px-6 py-4 text-emerald-500 font-black text-xs uppercase tracking-widest flex items-center">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></span>
+                    Aguardando Protocolo (15 dias)
+                  </div>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <select 
-                value={formData.lawyerId}
-                onChange={e => setFormData({...formData, lawyerId: e.target.value})}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
-              >
-                <option value="">Advogado Responsável...</option>
-                {lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-              <select 
-                value={formData.status}
-                onChange={e => setFormData({...formData, status: e.target.value as LegalCase['status']})}
-                className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
-              >
-                <option value="Ativo">Ativo</option>
-                <option value="Suspenso">Suspenso</option>
-                <option value="Julgado">Julgado</option>
-                <option value="Arquivado">Arquivado</option>
-              </select>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Nome do Autor</label>
+                <input 
+                  type="text" 
+                  value={formData.author}
+                  onChange={e => setFormData({...formData, author: e.target.value})}
+                  placeholder="Nome Completo do Cliente"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Data Assinatura Procuração</label>
+                <input 
+                  type="date" 
+                  value={formData.proxySignatureDate}
+                  onChange={e => setFormData({...formData, proxySignatureDate: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold"
+                  required
+                />
+              </div>
+            </div>
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Advogado Responsável</label>
+                <select 
+                  value={formData.lawyerId}
+                  onChange={e => setFormData({...formData, lawyerId: e.target.value})}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
+                >
+                  <option value="">Advogado Responsável...</option>
+                  {lawyers.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-4">Status do Processo</label>
+                <select 
+                  value={formData.status}
+                  onChange={e => setFormData({...formData, status: e.target.value as LegalCase['status']})}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white focus:border-emerald-500 outline-none font-bold appearance-none"
+                >
+                  <option value="Ativo">Ativo</option>
+                  <option value="Suspenso">Suspenso</option>
+                  <option value="Julgado">Julgado</option>
+                  <option value="Arquivado">Arquivado</option>
+                </select>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -821,7 +1020,7 @@ const App: React.FC = () => {
       <CaseDetailsModal 
         legalCase={selectedCase} 
         onClose={() => setSelectedCase(null)} 
-        onEdit={(c) => { setEditingCase(c); setFormData({ processNumber: c.processNumber, author: c.author, lawyerId: c.lawyerId, pdfData: c.pdfData || '', pdfName: c.pdfName || '', status: c.status }); setSelectedCase(null); setView(AppView.EDIT_CASE); }}
+        onEdit={(c) => { setEditingCase(c); setFormData({ processNumber: c.processNumber, author: c.author, lawyerId: c.lawyerId, proxySignatureDate: c.proxySignatureDate || '', isInitial: c.isInitial || false, pdfData: c.pdfData || '', pdfName: c.pdfName || '', status: c.status }); setSelectedCase(null); setView(AppView.EDIT_CASE); }}
         onDeleteCase={handleDeleteCase}
         onAddDeadline={handleSaveDeadline}
         onEditDeadline={startEditDeadline}

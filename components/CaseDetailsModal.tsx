@@ -29,7 +29,10 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
     date: '',
     type: 'Manifestação' as DeadlineType,
     subType: 'Manifestação Geral' as ManifestationSubType,
-    priority: 'Média' as Deadline['priority']
+    priority: 'Média' as Deadline['priority'],
+    sent: false,
+    pdfData: '',
+    pdfName: ''
   });
 
   if (!legalCase) return null;
@@ -41,7 +44,16 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
     if (onAddDeadline) {
       await onAddDeadline(undefined, { ...newDeadline, caseId: legalCase.id });
       setShowAddDeadline(false);
-      setNewDeadline({ title: '', date: '', type: 'Manifestação', subType: 'Manifestação Geral', priority: 'Média' });
+      setNewDeadline({ 
+        title: '', 
+        date: '', 
+        type: 'Manifestação', 
+        subType: 'Manifestação Geral', 
+        priority: 'Média',
+        sent: false,
+        pdfData: '',
+        pdfName: ''
+      });
     }
   };
 
@@ -98,6 +110,10 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Advogado</span>
                 <span className="text-white font-bold">{legalCase.lawyer}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Assinatura Procuração</span>
+                <span className="text-white font-bold">{new Date(legalCase.proxySignatureDate).toLocaleDateString('pt-BR')}</span>
               </div>
               {legalCase.pdfName && (
                 <button onClick={handleViewPdf} className="w-full py-3 bg-emerald-900/20 text-emerald-500 border border-emerald-900/30 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-900/40 transition-all">
@@ -159,6 +175,56 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
                       <option value="Manifestação Geral">Geral</option>
                     </select>
                   )}
+                  
+                  <div className="flex items-center space-x-3 bg-slate-900 border border-slate-800 rounded-xl px-4 py-2">
+                    <input 
+                      type="checkbox" 
+                      id="modal-sent-checkbox"
+                      checked={newDeadline.sent}
+                      onChange={e => setNewDeadline({...newDeadline, sent: e.target.checked})}
+                      className="w-4 h-4 accent-emerald-500"
+                    />
+                    <label htmlFor="modal-sent-checkbox" className="text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer">Encaminhada</label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf';
+                        input.onchange = (e: any) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setNewDeadline({
+                                ...newDeadline,
+                                pdfData: event.target?.result as string,
+                                pdfName: file.name
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
+                      className="w-full py-2 bg-slate-800 border border-slate-700 rounded-xl text-[10px] font-black text-slate-300 uppercase tracking-widest hover:bg-slate-700 transition-all"
+                    >
+                      {newDeadline.pdfName ? `PDF: ${newDeadline.pdfName}` : 'Anexar PDF'}
+                    </button>
+                    {newDeadline.pdfName && (
+                      <button 
+                        type="button"
+                        onClick={() => setNewDeadline({...newDeadline, pdfData: '', pdfName: ''})}
+                        className="w-full text-[8px] font-black text-red-500 uppercase tracking-widest hover:underline"
+                      >
+                        Remover Anexo
+                      </button>
+                    )}
+                  </div>
+
                   <button type="submit" className="w-full py-2 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-emerald-500 transition-all">Salvar Prazo</button>
                 </form>
               )}
@@ -167,12 +233,31 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
                 {caseDeadlines.map(d => (
                   <div key={d.id} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center group">
                     <div className="flex-grow">
-                      <p className={`text-xs font-bold ${d.completed ? 'text-slate-600 line-through' : 'text-white'}`}>{d.title}</p>
+                      <div className="flex items-center space-x-2">
+                        <p className={`text-xs font-bold ${d.completed ? 'text-slate-600 line-through' : 'text-white'}`}>{d.title}</p>
+                        {d.sent && <span className="bg-emerald-600 text-[7px] font-black text-white px-1.5 py-0.5 rounded uppercase tracking-widest">Encaminhada</span>}
+                      </div>
                       <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-0.5">
                         {new Date(d.date).toLocaleDateString()} &bull; {d.type} {d.subType ? `(${d.subType})` : ''}
                       </p>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                      {d.pdfData && (
+                        <button 
+                          onClick={() => {
+                            const newWindow = window.open();
+                            if (newWindow) {
+                              newWindow.document.write(
+                                `<iframe src="${d.pdfData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+                              );
+                            }
+                          }}
+                          className="text-emerald-500 hover:text-emerald-400 transition-colors"
+                          title="Ver Manifestação"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                        </button>
+                      )}
                       <button onClick={() => onEditDeadline?.(d)} className="text-slate-500 hover:text-emerald-500 transition-colors">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                       </button>
