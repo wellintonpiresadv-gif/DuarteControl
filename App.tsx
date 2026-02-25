@@ -8,6 +8,7 @@ import PaymentControl from './components/PaymentControl';
 import AccountsReceivable from './components/AccountsReceivable';
 import MonthlyReport from './components/MonthlyReport';
 import SideAgenda from './components/SideAgenda';
+import AppointmentCalendar from './components/AppointmentCalendar';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType, Payment } from './types';
 import { db } from './services/db';
 
@@ -835,6 +836,10 @@ const App: React.FC = () => {
             <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Relatórios</p>
             <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Relatório Mensal de Processos</p>
           </button>
+          <button onClick={() => setView(AppView.APPOINTMENTS)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Agenda de Compromissos</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Calendário e Horários</p>
+          </button>
           <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg group md:col-span-2">
             <p className="font-black text-lg uppercase tracking-tight">Novo Registro</p>
             <p className="text-xs text-emerald-100 mt-1 uppercase text-[9px]">Cadastrar Processo Cloud</p>
@@ -1037,6 +1042,7 @@ const App: React.FC = () => {
         />
       );
       case AppView.REPORTS: return <MonthlyReport cases={cases} />;
+      case AppView.APPOINTMENTS: return <AppointmentCalendar />;
       default: return renderHome();
     }
   };

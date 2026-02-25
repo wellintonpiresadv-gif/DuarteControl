@@ -77,5 +77,6 @@ export enum AppView {
   DEADLINES = 'deadlines',
   QUALIFIER = 'qualifier',
   PAYMENTS = 'payments',
-  REPORTS = 'reports'
+  REPORTS = 'reports',
+  APPOINTMENTS = 'appointments'
 }
