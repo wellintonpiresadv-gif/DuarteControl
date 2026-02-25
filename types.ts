@@ -58,6 +58,14 @@ export interface Payment {
   description?: string;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  time: string;
+  completed: boolean;
+  date: string;
+}
+
 export enum AppView {
   HOME = 'home',
   REGISTER = 'register',

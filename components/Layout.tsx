@@ -7,9 +7,10 @@ interface LayoutProps {
   currentView: AppView;
   setView: (view: AppView) => void;
   onLogout: () => void;
+  onOpenAgenda: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogout, onOpenAgenda }) => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       {/* Header */}
@@ -70,6 +71,15 @@ const Layout: React.FC<LayoutProps> = ({ children, currentView, setView, onLogou
                 className={`px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest transition-all ${currentView === AppView.PAYMENTS ? 'bg-emerald-600/10 text-emerald-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
               >
                 Financeiro
+              </button>
+              <button 
+                onClick={onOpenAgenda}
+                className="px-3 py-2 rounded-md text-[11px] font-black uppercase tracking-widest text-amber-500 hover:text-amber-400 hover:bg-amber-500/10 transition-all flex items-center"
+              >
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Agenda
               </button>
               <div className="w-px h-6 bg-slate-800 mx-2 self-center"></div>
               

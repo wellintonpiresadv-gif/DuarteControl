@@ -1,15 +1,50 @@
 
-import { LegalCase, Lawyer, Deadline, Payment } from '../types';
+import { LegalCase, Lawyer, Deadline, Payment, Task } from '../types';
 
 const CASES_KEY = 'duarte_control_cases';
 const LAWYERS_KEY = 'duarte_control_lawyers';
 const DEADLINES_KEY = 'duarte_control_deadlines';
 const PAYMENTS_KEY = 'duarte_control_payments';
+const TASKS_KEY = 'duarte_control_tasks';
 
 // Simulação de latência de rede para preparar a UI para um banco real
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export const db = {
+  // Tasks (Agenda Eletrônica)
+  getTasks: async (): Promise<Task[]> => {
+    await delay(300);
+    const data = localStorage.getItem(TASKS_KEY);
+    return data ? JSON.parse(data) : [];
+  },
+
+  saveTask: async (task: Task): Promise<Task[]> => {
+    await delay(400);
+    const tasks = await db.getTasks();
+    const updated = [...tasks, task];
+    localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
+  updateTask: async (updatedTask: Task): Promise<Task[]> => {
+    await delay(400);
+    const tasks = await db.getTasks();
+    const index = tasks.findIndex(t => t.id === updatedTask.id);
+    if (index !== -1) {
+      tasks[index] = updatedTask;
+      localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+    }
+    return tasks;
+  },
+
+  deleteTask: async (id: string): Promise<Task[]> => {
+    await delay(300);
+    const tasks = await db.getTasks();
+    const updated = tasks.filter(t => t.id !== id);
+    localStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+    return updated;
+  },
+
   // Processos (Cases)
   getCases: async (): Promise<LegalCase[]> => {
     await delay(400); // Simula busca no servidor Vercel

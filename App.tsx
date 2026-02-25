@@ -7,6 +7,7 @@ import Login from './components/Login';
 import PaymentControl from './components/PaymentControl';
 import AccountsReceivable from './components/AccountsReceivable';
 import MonthlyReport from './components/MonthlyReport';
+import SideAgenda from './components/SideAgenda';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType, Payment } from './types';
 import { db } from './services/db';
 
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   const [editingCase, setEditingCase] = useState<LegalCase | null>(null);
   const [editingLawyer, setEditingLawyer] = useState<Lawyer | null>(null);
   const [editingDeadline, setEditingDeadline] = useState<Deadline | null>(null);
+  const [isAgendaOpen, setIsAgendaOpen] = useState<boolean>(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -685,16 +687,25 @@ const App: React.FC = () => {
   const renderHome = () => (
     <div className="space-y-10 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-emerald-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Processos Ativos</p>
+        <div 
+          onClick={() => setView(AppView.SEARCH)}
+          className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-emerald-600 cursor-pointer hover:bg-slate-800 transition-all group"
+        >
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1 group-hover:text-emerald-400">Processos Ativos</p>
           <p className="text-4xl font-black text-white">{cases.length}</p>
         </div>
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-red-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Urgências (5 dias)</p>
+        <div 
+          onClick={() => setView(AppView.DEADLINES)}
+          className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-red-600 cursor-pointer hover:bg-slate-800 transition-all group"
+        >
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1 group-hover:text-red-400">Urgências (5 dias)</p>
           <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed && !d.sent && isNearDeadline(d.date)).length}</p>
         </div>
-        <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600">
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Agenda Pendente</p>
+        <div 
+          onClick={() => setView(AppView.DEADLINES)}
+          className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600 cursor-pointer hover:bg-slate-800 transition-all group"
+        >
+          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1 group-hover:text-blue-400">Agenda Pendente</p>
           <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed).length}</p>
         </div>
         <div className="bg-emerald-900/10 p-6 rounded-2xl border border-emerald-900/30">
@@ -778,6 +789,18 @@ const App: React.FC = () => {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
+                    <button 
+                      onClick={async () => {
+                        const updated = await db.updateDeadline({...d, sent: true, completed: true});
+                        setDeadlines(updated);
+                      }}
+                      className="text-slate-600 hover:text-emerald-500 opacity-0 group-hover:opacity-100 transition-all p-1"
+                      title="Marcar como Manifestado"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
                     <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase ${d.priority === 'Alta' ? 'bg-red-900/30 text-red-400' : 'bg-slate-800 text-slate-400'}`}>
                       {d.priority}
                     </span>
@@ -1021,9 +1044,10 @@ const App: React.FC = () => {
   if (!isAuthenticated) return <Login onLogin={handleLogin} />;
 
   return (
-    <Layout currentView={view} setView={setView} onLogout={handleLogout}>
+    <Layout currentView={view} setView={setView} onLogout={handleLogout} onOpenAgenda={() => setIsAgendaOpen(true)}>
       {isLoading && <LoadingOverlay />}
       {renderContent()}
+      {isAgendaOpen && <SideAgenda onClose={() => setIsAgendaOpen(false)} />}
       <CaseDetailsModal 
         legalCase={selectedCase} 
         onClose={() => setSelectedCase(null)} 
@@ -1033,6 +1057,7 @@ const App: React.FC = () => {
         onEditDeadline={startEditDeadline}
         allDeadlines={deadlines}
         onDeleteDeadline={async (id) => setDeadlines(await db.deleteDeadline(id))}
+        onUpdateDeadline={async (d) => setDeadlines(await db.updateDeadline(d))}
       />
     </Layout>
   );

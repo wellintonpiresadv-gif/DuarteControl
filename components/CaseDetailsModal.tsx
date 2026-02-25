@@ -11,6 +11,7 @@ interface CaseDetailsModalProps {
   onEditDeadline?: (d: Deadline) => void;
   allDeadlines: Deadline[];
   onDeleteDeadline: (id: string) => Promise<void>;
+  onUpdateDeadline: (d: Deadline) => Promise<void>;
 }
 
 const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({ 
@@ -21,7 +22,8 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
   onAddDeadline,
   onEditDeadline,
   allDeadlines,
-  onDeleteDeadline 
+  onDeleteDeadline,
+  onUpdateDeadline
 }) => {
   const [showAddDeadline, setShowAddDeadline] = useState(false);
   const [newDeadline, setNewDeadline] = useState({
@@ -242,6 +244,17 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
                       </p>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                      {!d.sent && (
+                        <button 
+                          onClick={() => onUpdateDeadline({...d, sent: true, completed: true})}
+                          className="text-emerald-500 hover:text-emerald-400 transition-colors"
+                          title="Marcar como Manifestado"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                      )}
                       {d.pdfData && (
                         <button 
                           onClick={() => {
