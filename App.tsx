@@ -6,6 +6,7 @@ import CaseDetailsModal from './components/CaseDetailsModal';
 import Login from './components/Login';
 import PaymentControl from './components/PaymentControl';
 import AccountsReceivable from './components/AccountsReceivable';
+import MonthlyReport from './components/MonthlyReport';
 import { LegalCase, AppView, SearchMode, Lawyer, Deadline, DeadlineType, ManifestationSubType, Payment } from './types';
 import { db } from './services/db';
 
@@ -164,6 +165,7 @@ const App: React.FC = () => {
           type: data.type,
           subType: data.type === 'Manifestação' ? data.subType : undefined,
           sent: data.sent,
+          completed: data.sent ? true : editingDeadline.completed,
           pdfData: data.pdfData,
           pdfName: data.pdfName
         };
@@ -180,7 +182,7 @@ const App: React.FC = () => {
           priority: data.priority,
           type: data.type,
           subType: data.type === 'Manifestação' ? data.subType : undefined,
-          completed: false,
+          completed: data.sent || false,
           sent: data.sent || false,
           pdfData: data.pdfData || '',
           pdfName: data.pdfName || ''
@@ -578,14 +580,14 @@ const App: React.FC = () => {
         <h3 className="text-xl font-black text-white uppercase tracking-tight border-l-4 border-emerald-600 pl-4">Agenda Jurídica Unificada</h3>
         <div className="grid grid-cols-1 gap-4">
           {deadlines.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map(d => {
-            const near = !d.completed && isNearDeadline(d.date);
+            const near = !d.completed && !d.sent && isNearDeadline(d.date);
             return (
-              <div key={d.id} className={`p-6 rounded-3xl border ${d.completed ? 'bg-slate-950 border-slate-900 opacity-60' : 'bg-slate-900 border-slate-800'} flex items-center transition-all group ${near ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : ''}`}>
+              <div key={d.id} className={`p-6 rounded-3xl border ${d.sent ? 'bg-emerald-900/20 border-emerald-500/50' : d.completed ? 'bg-slate-950 border-slate-900 opacity-60' : 'bg-slate-900 border-slate-800'} flex items-center transition-all group ${near ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : ''}`}>
                 <button 
                   onClick={() => db.updateDeadline({...d, completed: !d.completed}).then(list => setDeadlines(list))}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center mr-6 transition-all ${d.completed ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-500 hover:bg-emerald-900/50'}`}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center mr-6 transition-all ${d.completed || d.sent ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-500 hover:bg-emerald-900/50'}`}
                 >
-                  {d.completed ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg> : <div className="w-4 h-4 border-2 border-slate-600 rounded-full"></div>}
+                  {d.completed || d.sent ? <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" /></svg> : <div className="w-4 h-4 border-2 border-slate-600 rounded-full"></div>}
                 </button>
                 <div className="flex-grow">
                   <div className="flex items-center space-x-3">
@@ -689,7 +691,7 @@ const App: React.FC = () => {
         </div>
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-red-600">
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Urgências (5 dias)</p>
-          <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed && isNearDeadline(d.date)).length}</p>
+          <p className="text-4xl font-black text-white">{deadlines.filter(d => !d.completed && !d.sent && isNearDeadline(d.date)).length}</p>
         </div>
         <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 border-l-4 border-l-blue-600">
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Agenda Pendente</p>
@@ -762,7 +764,7 @@ const App: React.FC = () => {
              Prazos Críticos
           </h2>
           <div className="space-y-4">
-            {deadlines.filter(d => !d.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5).map(d => {
+            {deadlines.filter(d => !d.completed && !d.sent).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime()).slice(0, 5).map(d => {
                const near = isNearDeadline(d.date);
                return (
                 <div key={d.id} className={`bg-slate-900 p-5 rounded-2xl border ${near ? 'border-red-600/50 shadow-[0_0_10px_rgba(220,38,38,0.1)]' : 'border-slate-800'} flex justify-between items-center group`}>
@@ -805,6 +807,10 @@ const App: React.FC = () => {
           <button onClick={() => setView(AppView.PAYMENTS)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
             <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Financeiro</p>
             <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Controle de Pagamentos e Recebíveis</p>
+          </button>
+          <button onClick={() => setView(AppView.REPORTS)} className="p-8 bg-slate-900 text-white rounded-3xl hover:bg-slate-800 border border-slate-800 transition-all text-left group">
+            <p className="font-black text-lg uppercase tracking-tight group-hover:text-emerald-400">Relatórios</p>
+            <p className="text-xs text-slate-500 mt-1 uppercase text-[9px]">Relatório Mensal de Processos</p>
           </button>
           <button onClick={() => setView(AppView.REGISTER)} className="p-8 bg-emerald-600 text-white rounded-3xl hover:bg-emerald-500 transition-all text-left shadow-lg group md:col-span-2">
             <p className="font-black text-lg uppercase tracking-tight">Novo Registro</p>
@@ -1007,6 +1013,7 @@ const App: React.FC = () => {
           setIsLoading={setIsLoading} 
         />
       );
+      case AppView.REPORTS: return <MonthlyReport cases={cases} />;
       default: return renderHome();
     }
   };

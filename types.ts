@@ -68,5 +68,6 @@ export enum AppView {
   MANAGE_LAWYERS = 'manage_lawyers',
   DEADLINES = 'deadlines',
   QUALIFIER = 'qualifier',
-  PAYMENTS = 'payments'
+  PAYMENTS = 'payments',
+  REPORTS = 'reports'
 }

@@ -231,7 +231,7 @@ const CaseDetailsModal: React.FC<CaseDetailsModalProps> = ({
 
               <div className="space-y-3">
                 {caseDeadlines.map(d => (
-                  <div key={d.id} className="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex justify-between items-center group">
+                  <div key={d.id} className={`p-4 border rounded-2xl flex justify-between items-center group transition-all ${d.sent ? 'bg-emerald-900/20 border-emerald-500/50' : 'bg-slate-950 border-slate-800'}`}>
                     <div className="flex-grow">
                       <div className="flex items-center space-x-2">
                         <p className={`text-xs font-bold ${d.completed ? 'text-slate-600 line-through' : 'text-white'}`}>{d.title}</p>
